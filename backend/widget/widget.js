@@ -81,13 +81,13 @@
 
     addMsg(text, "user");
 
-    // Push to socket room so agents see it in real time
-    if (socket && conversationId) {
-      socket.emit("customer:message", { conversationId, content: text });
+    // If a human agent is active, send via socket only (agent sees it in real-time, no AI)
+    if (isHumanActive) {
+      if (socket && conversationId) {
+        socket.emit("customer:message", { conversationId, content: text });
+      }
+      return;
     }
-
-    // If a human agent is active, don't call the AI
-    if (isHumanActive) return;
 
     const typingEl = document.createElement("div");
     typingEl.className = "msg bot typing-indicator";
@@ -99,6 +99,7 @@
       const res = await fetch(`${API}/api/chat/message`, {
         method: "POST",
         headers: { "content-type": "application/json", accept: "text/event-stream" },
+        mode: "cors",
         body: JSON.stringify({ tenantId, sessionId, message: text }),
       });
 
@@ -133,8 +134,12 @@
             }
             if (eventLine === "done") {
               if (data.ticket) showTicketForm();
-              if (data.message?.conversationId && !conversationId) {
-                conversationId = data.message.conversationId;
+              if (data.message?.conversationId) {
+                const newConvId = data.message.conversationId;
+                if (!conversationId) {
+                  conversationId = newConvId;
+                  connectSocket();
+                }
               }
             }
           } catch {}
@@ -202,7 +207,7 @@
   }
 
   // ── Build UI ─────────────────────────────────────────────────────────────
-  fetch(`${API}/api/widget/${tenantId}/config`)
+  fetch(`${API}/api/widget/${tenantId}/config`, { mode: "cors" })
     .then((r) => r.json())
     .then(async (cfg) => {
       config = cfg;
@@ -430,13 +435,15 @@
       const sessRes = await fetch(`${API}/api/chat/session`, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        mode: "cors",
         body: JSON.stringify({ tenantId }),
       });
+      if (!sessRes.ok) throw new Error(`Session error: ${sessRes.status}`);
       const sessData = await sessRes.json();
       sessionId      = sessData.sessionId;
       conversationId = sessData.conversationId ?? null;
 
-      // Connect socket for real-time
+      // Connect socket only when we have a real conversation
       if (conversationId) connectSocket();
 
       // ── Toggle ──────────────────────────────────────────────────────────
@@ -478,6 +485,7 @@
           const r = await fetch(`${API}/api/chat/ticket`, {
             method: "POST",
             headers: { "content-type": "application/json" },
+            mode: "cors",
             body: JSON.stringify({
               tenantId, sessionId,
               customerName: name, customerEmail: email,

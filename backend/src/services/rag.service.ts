@@ -92,7 +92,7 @@ async function prepareRag(tenantId: string, query: string) {
     hits = await qdrant.search(collectionName(tenantId), {
       vector,
       limit: 5,
-      score_threshold: 0.45,
+      score_threshold: 0.25,
       with_payload: true,
     });
   } catch {

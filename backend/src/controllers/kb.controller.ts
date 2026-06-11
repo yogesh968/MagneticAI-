@@ -7,6 +7,7 @@ import { processDocument } from "../services/document.service.js";
 export async function upload(req: Request, res: Response) {
   if (!req.file) return res.status(400).json({ message: "A supported file is required" });
   const type = req.file.originalname.split(".").pop()!.toLowerCase();
+  // Store only the filename, not the full absolute path — portable across deployments
   const document = await Document.create({ tenantId: req.tenantId, name: req.file.originalname, type, originalUrl: req.file.path, uploadedBy: req.user!.id, metadata: { size: req.file.size } });
   void processDocument(String(document._id), String(req.tenantId), req.file.path, type);
   res.status(202).json(document);

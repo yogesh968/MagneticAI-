@@ -7,16 +7,17 @@ import { createTicket, evaluateEscalation } from "../services/escalation.service
 export async function createSession(req: Request, res: Response) {
   if (!await Tenant.exists({ _id: req.body.tenantId })) return res.status(404).json({ message: "Tenant not found" });
   const sessionId = crypto.randomUUID();
-  await Conversation.create({ tenantId: req.body.tenantId, sessionId, customerName: req.body.customerName, customerEmail: req.body.customerEmail });
-  res.status(201).json({ sessionId });
+  const conversation = await Conversation.create({ tenantId: req.body.tenantId, sessionId, customerName: req.body.customerName, customerEmail: req.body.customerEmail });
+  res.status(201).json({ sessionId, conversationId: String(conversation._id) });
 }
 
 async function persistReply(tenantId: string, conversation: any, userMessage: string, result: Awaited<ReturnType<typeof answerWithRag>>, started: number) {
   const escalation = await evaluateEscalation(tenantId, `${userMessage}\n${result.answer}`);
   const assistant = await Message.create({ tenantId, conversationId: conversation._id, role: "assistant", content: result.answer, metadata: { responseTime: Date.now() - started, documentsReferenced: result.documentsReferenced } });
   conversation.messageCount += 2;
+  // Only create ticket on explicit escalation trigger — not just because KB had no context
   let ticket;
-  if (!result.hasContext || escalation) ticket = await createTicket(tenantId, conversation, userMessage, escalation?.priority ?? "low");
+  if (escalation) ticket = await createTicket(tenantId, conversation, userMessage, escalation.priority);
   await conversation.save();
   return { assistant, ticket };
 }

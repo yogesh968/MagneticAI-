@@ -1,9 +1,13 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { resolve } from "node:path";
+import { copyFile, mkdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { connectDB } from "./config/db.js";
 import { BotConfig, Conversation, Document, Message, Tenant, Ticket, User } from "./models/index.js";
 import { processDocument } from "./services/document.service.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 await connectDB();
 
@@ -96,13 +100,18 @@ if (!configExists) {
 // ── Knowledge Base documents ─────────────────────────────────────────────────
 const docCount = await Document.countDocuments({ tenantId: tenant._id });
 if (docCount === 0) {
+  await mkdir("/tmp/uploads", { recursive: true });
   const sampleFiles = [
     { name: "Refund Policy", file: "refund-policy.txt" },
     { name: "Shipping FAQ", file: "shipping-faq.txt" },
     { name: "Product Guide", file: "product-guide.txt" },
   ];
   for (const sample of sampleFiles) {
-    const filePath = resolve(process.cwd(), "../sample-kb", sample.file);
+    // ESM-safe path resolution — works locally and on Railway/Render
+    const srcPath = resolve(__dirname, "../../sample-kb", sample.file);
+    const destPath = `/tmp/uploads/${sample.file}`;
+    await copyFile(srcPath, destPath).catch(() => {});
+    const filePath = destPath;
     const doc = await Document.create({
       tenantId: tenant._id,
       name: `${sample.name}.txt`,
@@ -112,7 +121,6 @@ if (docCount === 0) {
       uploadedBy: admin._id,
       metadata: { size: 1024 },
     });
-    // Process with Cohere embeddings (uses COHERE_API_KEY from env)
     try {
       await processDocument(String(doc._id), String(tenant._id), filePath, "txt");
       console.info(`[seed] indexed: ${sample.name}`);

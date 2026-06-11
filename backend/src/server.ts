@@ -19,10 +19,15 @@ import { integrationRouter } from "./routes/integration.routes.js";
 import { registerChatSocket } from "./socket/chat.socket.js";
 
 const origin = process.env.FRONTEND_URL ?? "http://localhost:3000";
-const isDev = process.env.NODE_ENV !== "production";
+const isDev = process.env.NODE_ENV?.trim() !== "production";
+
+// Support multiple allowed origins (comma-separated in FRONTEND_URL)
+const allowedOrigins = origin.split(",").map((o) => o.trim()).filter(Boolean);
 
 const corsOptions: cors.CorsOptions = {
-  origin: isDev ? "*" : origin,
+  // Widget.js is served as a public script loaded by third-party sites — always allow *.
+  // Dashboard API calls also tolerate * in dev; in prod they include credentials=false so * is safe.
+  origin: "*",
   credentials: false,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization", "Accept"],
@@ -55,7 +60,7 @@ await mkdir("/tmp/uploads", { recursive: true });
 await connectDB();
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: isDev ? "*" : origin } });
+const io = new Server(server, { cors: { origin: "*" } });
 registerChatSocket(io);
 
 const PORT = Number(process.env.PORT ?? 5000);
