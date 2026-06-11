@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
-import mammoth from "mammoth";
-import pdf from "pdf-parse";
+import mammothPkg from "mammoth";
+import pdfPkg from "pdf-parse";
+const mammoth = (mammothPkg as any).default ?? mammothPkg;
+const pdf = (pdfPkg as any).default ?? pdfPkg;
 
 export async function parseDocument(path: string, type: string) {
   const buffer = await readFile(path);

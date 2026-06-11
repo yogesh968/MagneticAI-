@@ -1,3 +1,4 @@
-import Groq from "groq-sdk";
+import GroqPkg from "groq-sdk";
+const GroqClient = (GroqPkg as any).default ?? GroqPkg;
 
-export const groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "missing" });
+export const groq = new GroqClient({ apiKey: process.env.GROQ_API_KEY ?? "missing" });
