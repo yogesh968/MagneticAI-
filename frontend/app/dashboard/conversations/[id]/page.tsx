@@ -47,48 +47,49 @@ export default function ConversationDetailPage() {
     if (!id) return;
 
     const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    socket.connect();
 
-    socket.on("connect", () => {
+    if (!socket.connected) socket.connect();
+
+    const onConnect = () => {
       setSocketConnected(true);
       socket.emit("join:conversation", { conversationId: id, token });
-    });
-
-    socket.on("disconnect", () => setSocketConnected(false));
-
-    socket.on("message:new", (msg: any) => {
-      setMessages((prev) => [...prev, msg]);
+    };
+    const onDisconnect = () => setSocketConnected(false);
+    const onNewMessage = (msg: any) => {
+      setMessages((prev) => prev.find((m) => m._id === msg._id) ? prev : [...prev, msg]);
       setCustomerTyping(false);
-    });
-
-    socket.on("handoff:active", ({ agentName, message }: any) => {
+    };
+    const onHandoff = ({ agentName, message }: any) => {
       setHandoff(true);
       if (message) setMessages((prev) => [...prev, message]);
       toast.success(`${agentName} has taken over the conversation`);
-    });
+    };
+    const onTypingStart = ({ isAgent }: any) => { if (!isAgent) setCustomerTyping(true); };
+    const onTypingStop = () => setCustomerTyping(false);
 
-    socket.on("typing:start", ({ isAgent }: any) => {
-      if (!isAgent) setCustomerTyping(true);
-    });
-    socket.on("typing:stop", () => setCustomerTyping(false));
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("message:new", onNewMessage);
+    socket.on("customer:message", onNewMessage);
+    socket.on("handoff:active", onHandoff);
+    socket.on("typing:start", onTypingStart);
+    socket.on("typing:stop", onTypingStop);
 
-    socket.on("customer:message", (msg: any) => {
-      setMessages((prev) => {
-        if (prev.find((m) => m._id === msg._id)) return prev;
-        return [...prev, msg];
-      });
-      setCustomerTyping(false);
-    });
+    // If already connected, join immediately
+    if (socket.connected) {
+      setSocketConnected(true);
+      socket.emit("join:conversation", { conversationId: id, token });
+    }
 
     return () => {
       socket.emit("leave:conversation", { conversationId: id });
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("message:new");
-      socket.off("handoff:active");
-      socket.off("typing:start");
-      socket.off("typing:stop");
-      socket.off("customer:message");
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("message:new", onNewMessage);
+      socket.off("customer:message", onNewMessage);
+      socket.off("handoff:active", onHandoff);
+      socket.off("typing:start", onTypingStart);
+      socket.off("typing:stop", onTypingStop);
       socket.disconnect();
     };
   }, [id]);
@@ -146,7 +147,7 @@ export default function ConversationDetailPage() {
             </h1>
             <Badge tone={STATUS_TONE[c.status] ?? "slate"}>{c.status}</Badge>
             {c.isEscalated && <Badge tone="red">Escalated</Badge>}
-            {handoffActive && <Badge tone="green">🟢 Human active</Badge>}
+            {handoffActive && <Badge tone="green">Human active</Badge>}
           </div>
           <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-400">
             {c.customerEmail && (

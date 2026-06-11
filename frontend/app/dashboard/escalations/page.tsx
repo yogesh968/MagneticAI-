@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Badge, Empty, Loading, PageHeader } from "@/components/ui";
 import { AlertTriangle, Flame, Clock, ChevronRight, ShieldAlert } from "lucide-react";
+import toast from "react-hot-toast";
 
 const PRIORITY_TONE: Record<string, string> = { low: "slate", medium: "cyan", high: "orange", urgent: "red" };
 
@@ -23,7 +24,9 @@ export default function EscalationsPage() {
     Promise.all([
       api.get("/tickets", { params: { priority: "urgent", status: "open" } }),
       api.get("/tickets", { params: { priority: "high",   status: "open" } }),
-    ]).then(([u, h]) => { setUrgent(u.data); setHigh(h.data); });
+    ])
+      .then(([u, h]) => { setUrgent(u.data); setHigh(h.data); })
+      .catch(() => toast.error("Failed to load escalations"));
   }, []);
 
   const loading = !urgent || !high;

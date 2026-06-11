@@ -7,6 +7,7 @@ import {
   ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { BarChart3, FileText, TrendingUp, AlertTriangle, MessageSquare } from "lucide-react";
+import toast from "react-hot-toast";
 
 const PIE_COLORS: Record<string, string> = {
   urgent: "#ef4444", high: "#f97316", medium: "#3b82f6", low: "#94a3b8",
@@ -37,11 +38,15 @@ export default function AnalyticsPage() {
       api.get("/analytics/kb"),
       api.get("/analytics/escalations"),
       api.get("/analytics/overview"),
-    ]).then(([c, k, e, o]) => {
-      setCharts(c.data); setKb(k.data);
-      setEscalation(e.data); setOverview(o.data);
-      setLoading(false);
-    });
+    ])
+      .then(([c, k, e, o]) => {
+        setCharts(c.data);
+        setKb(k.data);
+        setEscalation(e.data);
+        setOverview(o.data);
+      })
+      .catch(() => toast.error("Failed to load analytics"))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {

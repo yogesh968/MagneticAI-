@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Badge, Empty, Loading, PageHeader, Spinner } from "@/components/ui";
 import {
@@ -33,15 +33,20 @@ export default function KnowledgeBasePage() {
   const [drag, setDrag] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const reload = () => api.get("/kb/documents").then((r) => setData(r.data));
-  useEffect(() => { reload(); }, []);
+  const reload = useCallback(() =>
+    api.get("/kb/documents")
+      .then((r) => setData(r.data))
+      .catch(() => {}),
+  []);
+
+  useEffect(() => { reload(); }, [reload]);
 
   useEffect(() => {
     const busy = data?.items?.some((d: any) => ["processing", "pending"].includes(d.status));
     if (!busy) return;
     const id = setTimeout(reload, 3000);
     return () => clearTimeout(id);
-  }, [data]);
+  }, [data, reload]);
 
   const doUpload = async (file: File) => {
     setUploading(true);
