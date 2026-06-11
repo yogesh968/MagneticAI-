@@ -52,14 +52,14 @@ export const Badge = ({
 export const Empty = ({
   title, text, icon, action,
 }: { title: string; text: string; icon?: ReactNode; action?: ReactNode }) => (
-  <div className="flex flex-col items-center py-20 text-center">
+  <div className="flex flex-col items-center py-20 text-center anim-up">
     {icon && (
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-slate-400">
         {icon}
       </div>
     )}
-    <p className="text-base font-semibold text-slate-800">{title}</p>
-    <p className="mt-1.5 max-w-sm text-sm text-slate-500">{text}</p>
+    <p className="text-base font-semibold text-slate-700">{title}</p>
+    <p className="mt-1.5 max-w-xs text-sm text-slate-400 leading-relaxed">{text}</p>
     {action && <div className="mt-5">{action}</div>}
   </div>
 );
@@ -97,13 +97,13 @@ export const Avatar = ({ name, size = "md" }: { name: string; size?: "sm" | "md"
 };
 
 /* ── StatCard ───────────────────────────────────────────────────────────── */
-const STAT_TONE: Record<string, { bg: string; text: string; ring: string }> = {
-  blue:   { bg: "bg-blue-50",   text: "text-blue-600",   ring: "ring-blue-200/60" },
-  amber:  { bg: "bg-amber-50",  text: "text-amber-600",  ring: "ring-amber-200/60" },
-  green:  { bg: "bg-green-50",  text: "text-green-600",  ring: "ring-green-200/60" },
-  red:    { bg: "bg-red-50",    text: "text-red-600",    ring: "ring-red-200/60" },
-  purple: { bg: "bg-purple-50", text: "text-purple-600", ring: "ring-purple-200/60" },
-  cyan:   { bg: "bg-cyan-50",   text: "text-cyan-600",   ring: "ring-cyan-200/60" },
+const STAT_TONE: Record<string, { bg: string; text: string; border: string; bar: string }> = {
+  blue:   { bg: "bg-blue-50",   text: "text-blue-600",   border: "border-blue-100",   bar: "bg-blue-500" },
+  amber:  { bg: "bg-amber-50",  text: "text-amber-600",  border: "border-amber-100",  bar: "bg-amber-500" },
+  green:  { bg: "bg-emerald-50",text: "text-emerald-600",border: "border-emerald-100",bar: "bg-emerald-500" },
+  red:    { bg: "bg-red-50",    text: "text-red-600",    border: "border-red-100",    bar: "bg-red-500" },
+  purple: { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100", bar: "bg-purple-500" },
+  cyan:   { bg: "bg-cyan-50",   text: "text-cyan-600",   border: "border-cyan-100",   bar: "bg-cyan-500" },
 };
 
 export function StatCard({
@@ -120,23 +120,23 @@ export function StatCard({
 }) {
   const t = STAT_TONE[tone] ?? STAT_TONE.blue;
   return (
-    <div className={`card group anim-up ${delay ?? ""}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-          <p className="mt-2.5 text-3xl font-extrabold tabular-nums tracking-tight text-slate-900">{value}</p>
-          {sub && <p className="mt-1 text-xs text-slate-400">{sub}</p>}
-          {trendLabel && (
-            <div className={`mt-2 flex items-center gap-1 text-xs font-semibold ${trend === "up" ? "text-emerald-600" : "text-red-500"}`}>
-              {trend === "up" ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-              {trendLabel}
-            </div>
-          )}
-        </div>
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 transition-transform group-hover:scale-110 ${t.bg} ${t.ring}`}>
+    <div className={`card group anim-up ${delay ?? ""} hover:shadow-[0_4px_16px_0_rgb(0,0,0,0.08)] transition-shadow duration-200`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${t.bg} ${t.border} transition-transform duration-200 group-hover:scale-105`}>
           <span className={t.text}>{icon}</span>
         </div>
+        {trendLabel && (
+          <div className={`flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5 ${
+            trend === "up" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
+          }`}>
+            {trend === "up" ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+            {trendLabel}
+          </div>
+        )}
       </div>
+      <p className="text-[28px] font-extrabold tabular-nums tracking-tight text-slate-900 leading-none">{value}</p>
+      <p className="mt-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+      {sub && <p className="mt-1 text-[11px] text-slate-400">{sub}</p>}
     </div>
   );
 }
@@ -146,12 +146,12 @@ export function PageHeader({
   title, subtitle, action,
 }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-6 flex items-start justify-between gap-4">
+    <div className="mb-6 flex items-start justify-between gap-4 anim-up">
       <div>
         <h1 className="page-title">{title}</h1>
         {subtitle && <p className="page-sub">{subtitle}</p>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="shrink-0 flex items-center gap-2">{action}</div>}
     </div>
   );
 }
