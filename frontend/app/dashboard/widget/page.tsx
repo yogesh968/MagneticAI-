@@ -29,18 +29,24 @@ export default function WidgetPage() {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user") ?? "{}");
     setTenantId(user.tenantId ?? "");
-    api.get("/config/bot").then((r) => {
-      reset({
-        widgetColor:    r.data.settings?.widgetColor    ?? "#2563eb",
-        widgetPosition: r.data.settings?.widgetPosition ?? "bottom-right",
-      });
-      setLoading(false);
-    });
+    api.get("/config/bot")
+      .then((r) => {
+        reset({
+          widgetColor:    r.data.settings?.widgetColor    ?? "#2563eb",
+          widgetPosition: r.data.settings?.widgetPosition ?? "bottom-right",
+        });
+      })
+      .catch(() => toast.error("Failed to load widget config"))
+      .finally(() => setLoading(false));
   }, [reset]);
 
   const save = async (values: FormValues) => {
-    await api.put("/config/bot", { settings: values });
-    toast.success("Widget settings saved");
+    try {
+      await api.put("/config/bot", { settings: values });
+      toast.success("Widget settings saved");
+    } catch (e: any) {
+      toast.error(e.response?.data?.message ?? "Save failed");
+    }
   };
 
   const snippet = `<!-- Magnetic AI Widget -->\n<script src="${API_URL}/widget.js" data-tenant-id="${tenantId}"></script>`;
