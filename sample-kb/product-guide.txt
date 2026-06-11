@@ -1,0 +1,23 @@
+Acme offers a full product suite for teams of all sizes.
+
+## Getting Started
+Create an account at app.acme.com. During onboarding you will be asked to name your workspace and invite teammates.
+
+## Core Features
+- **Inbox** — unified view of all customer conversations
+- **Knowledge Base** — upload PDFs, DOCX, or text files; the AI answers are grounded in these documents
+- **Tickets** — auto-created when the AI cannot resolve a query or detects escalation keywords
+- **Analytics** — daily conversation volume, escalation breakdown, and KB usage charts
+- **AI Configuration** — set bot name, personality, welcome message, suggested questions, and escalation rules
+- **Widget** — embed a single `<script>` tag on any website
+
+## Integrations
+Connect Slack to receive ticket notifications. Use the email webhook (`POST /api/integrations/email`) to pipe support emails directly into the ticket system.
+
+## Roles
+- **Admin** — full access including knowledge base management and AI configuration
+- **Agent** — can view and update tickets and conversations
+- **Superadmin** — cross-tenant access (internal use)
+
+## Billing
+Plans: Free (1 seat, 500 conversations/mo), Pro (5 seats, unlimited conversations), Enterprise (custom). Upgrade at any time from Settings → Billing.
