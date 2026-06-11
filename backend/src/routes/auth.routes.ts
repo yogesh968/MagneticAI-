@@ -1,11 +1,11 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import rateLimitPkg from "express-rate-limit";
 import { z } from "zod";
 import { forgotPassword, login, me, refresh, register, resetPassword } from "../controllers/auth.controller.js";
 import { extractTenant, validate, verifyJWT } from "../middleware/index.js";
 
 // Created at module level — not inside a request handler
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 100, standardHeaders: true, legacyHeaders: false });
+const limiter = (rateLimitPkg as any)({ windowMs: 15 * 60 * 1000, limit: 100, standardHeaders: true, legacyHeaders: false });
 
 export const authRouter = Router();
 authRouter.use(limiter);
