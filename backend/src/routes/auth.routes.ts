@@ -1,5 +1,5 @@
 import { Router } from "express";
-import rateLimit from "express-rate-limit";
+import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
 import { forgotPassword, inviteMember, login, me, refresh, register, removeMember, resetPassword } from "../controllers/auth.controller.js";
 import { extractTenant, rbacCheck, validate, verifyJWT } from "../middleware/index.js";
