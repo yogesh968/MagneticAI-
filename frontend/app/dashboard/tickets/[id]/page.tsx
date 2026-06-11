@@ -17,7 +17,7 @@ export default function TicketDetailPage() {
   const [saving, setSaving] = useState(false);
 
   const reload = () => api.get(`/tickets/${id}`).then((r) => setData(r.data));
-  useEffect(() => { reload(); }, [id]);
+  useEffect(() => { reload(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = async (patch: Record<string, string>) => {
     setSaving(true);

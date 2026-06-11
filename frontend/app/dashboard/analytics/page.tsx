@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
         <div className="card anim-up d8">
           <p className="section-title mb-1">Unanswered Queries</p>
           <p className="text-xs text-slate-400 mb-5">
-            Questions the AI couldn't answer — consider adding relevant docs to your KB
+            Questions the AI could not answer — consider adding relevant docs to your KB
           </p>
           <div className="space-y-2">
             {kb.failedQueries.slice(0, 10).map((q: any, i: number) => (

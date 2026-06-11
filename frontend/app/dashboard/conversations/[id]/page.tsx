@@ -35,7 +35,7 @@ export default function ConversationDetailPage() {
         setHandoff(r.data.conversation?.isEscalated === false);
       })
       .catch(() => router.replace("/dashboard/conversations"));
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scroll to bottom ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -271,7 +271,7 @@ export default function ConversationDetailPage() {
           <div className={`border-t border-slate-200 bg-white p-4 shrink-0 ${!handoffActive ? "opacity-50 pointer-events-none" : ""}`}>
             {!handoffActive && (
               <p className="text-xs text-center text-slate-400 mb-2">
-                Click <strong>"Take over"</strong> to send messages to the customer
+                Click <strong>&quot;Take over&quot;</strong> to send messages to the customer
               </p>
             )}
             <div className="flex gap-2">

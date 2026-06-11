@@ -115,7 +115,7 @@ export default function IntegrationsPage() {
                     <li>Add these env vars to your backend <code className="bg-blue-100 px-1 rounded">.env</code>:
                       <br /><code className="bg-blue-100 px-1 rounded">TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, WHATSAPP_TENANT_ID</code>
                     </li>
-                    <li>In Twilio Console → WhatsApp Sandbox → "When a message comes in", paste the webhook URL below</li>
+                    <li>In Twilio Console → WhatsApp Sandbox → &quot;When a message comes in&quot;, paste the webhook URL below</li>
                     <li>Set HTTP method to <strong>POST</strong></li>
                   </ol>
                 </div>
