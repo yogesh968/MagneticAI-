@@ -51,7 +51,7 @@ app.use("/api/integrations", integrationRouter);
 app.use("/widget.js", express.static(new URL("../widget/widget.js", import.meta.url).pathname));
 app.use(errorHandler);
 
-await mkdir("uploads", { recursive: true });
+await mkdir("/tmp/uploads", { recursive: true });
 await connectDB();
 
 const server = http.createServer(app);
