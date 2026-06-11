@@ -263,7 +263,7 @@
           padding:8px 16px;font-size:12px;font-weight:600;color:#92400e;
           flex-shrink:0;
         }
-        .handoff-banner::before{content:"👤";font-size:14px}
+        .handoff-banner::before{content:"";display:none}
 
         /* Messages */
         .messages{
@@ -387,7 +387,7 @@
         <div class="chips"></div>
 
         <div class="ticket-form">
-          <p>📋 Let our team follow up by email</p>
+          <p>Let our team follow up by email</p>
           <input id="tf-name" placeholder="Your name" autocomplete="name" />
           <input id="tf-email" type="email" placeholder="Email address" autocomplete="email" />
           <button id="tf-btn">Create support ticket →</button>
@@ -486,7 +486,7 @@
           });
           if (r.ok) {
             $(".ticket-form").style.display = "none";
-            addMsg("✅ Ticket created! Our team will follow up at **" + email + "** within 24 hours.", "bot");
+            addMsg("Ticket created! Our team will follow up at **" + email + "** within 24 hours.", "bot");
           } else {
             throw new Error("Failed");
           }

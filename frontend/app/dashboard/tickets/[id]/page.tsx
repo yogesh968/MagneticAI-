@@ -226,7 +226,7 @@ export default function TicketDetailPage() {
                 disabled={saving}
                 className="btn-success w-full gap-2"
               >
-                ✓ Mark as Resolved
+                Mark as Resolved
               </button>
               <button
                 onClick={() => update({ status: "closed" })}

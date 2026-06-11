@@ -44,7 +44,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
         localStorage.setItem("accessToken", data.accessToken);
         localStorage.setItem("refreshToken", data.refreshToken);
         if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
-        toast.success(mode === "register" ? `Welcome aboard, ${data.user?.name ?? ""}! 🎉` : "Welcome back!");
+        toast.success(mode === "register" ? `Welcome aboard, ${data.user?.name ?? ""}!` : "Welcome back!");
         router.push("/dashboard");
         return;
       }

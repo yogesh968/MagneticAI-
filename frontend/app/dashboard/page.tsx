@@ -75,7 +75,7 @@ export default function DashboardPage() {
     <div className="p-7 space-y-6">
       {/* Header */}
       <div className="anim-up">
-        <h1 className="page-title">Good morning 👋</h1>
+        <h1 className="page-title">Good morning</h1>
         <p className="page-sub">Here&apos;s what&apos;s happening with your support platform today.</p>
       </div>
 

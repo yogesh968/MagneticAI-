@@ -51,7 +51,7 @@ if (!configExists) {
   await BotConfig.create({
     tenantId: tenant._id,
     botName: "AcmeBot",
-    welcomeMessage: "Hi there! 👋 I'm AcmeBot, your AI support assistant. How can I help you today?",
+    welcomeMessage: "Hi! I'm AcmeBot, your AI support assistant. How can I help you today?",
     personality: "friendly",
     isActive: true,
     escalationRules: [
@@ -213,7 +213,7 @@ if (convCount === 0) {
   }
 }
 
-console.info(`✅ Seed complete — tenant: ${tenant._id}`);
+console.info(`Seed complete — tenant: ${tenant._id}`);
 console.info(`   Admin: admin@demo.com / Demo@1234`);
 console.info(`   Agent: agent@demo.com / Demo@1234`);
 process.exit(0);
