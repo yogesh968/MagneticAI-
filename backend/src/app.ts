@@ -1,8 +1,7 @@
 import "dotenv/config";
 import "express-async-errors";
 import { mkdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import type { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import express from "express";
 import helmetPkg from "helmet";
@@ -16,9 +15,7 @@ import { conversationRouter } from "./routes/conversation.routes.js";
 import { integrationRouter } from "./routes/integration.routes.js";
 import { kbRouter } from "./routes/kb.routes.js";
 import { ticketRouter } from "./routes/ticket.routes.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");
+import { uploadDir } from "./utils/upload-path.js";
 
 const corsOptions: cors.CorsOptions = {
   origin: "*",
@@ -39,6 +36,17 @@ app.use(express.urlencoded({ extended: true, limit: "1mb" })); // Twilio sends f
 
 app.get("/", (_req, res) => res.json({ status: "ok", service: "Magnetic AI API" }));
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/favicon.ico", (_req, res) => res.status(204).end());
+
+app.use("/api", async (_req: Request, _res: Response, next: NextFunction) => {
+  try {
+    await initializeApp();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use("/api/auth", authRouter);
 app.use("/api/kb", kbRouter);
 app.use("/api/chat", chatRouter);
@@ -55,7 +63,7 @@ let initPromise: Promise<void> | undefined;
 
 export function initializeApp() {
   initPromise ??= Promise.all([
-    mkdir(UPLOAD_DIR, { recursive: true }),
+    mkdir(uploadDir, { recursive: true }),
     connectDB(),
   ]).then(() => undefined);
 

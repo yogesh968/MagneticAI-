@@ -1,18 +1,13 @@
 import type { Request, Response } from "express";
-import { unlink } from "node:fs/promises";
-import { mkdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { mkdir, unlink } from "node:fs/promises";
 import { Document } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { processDocument } from "../services/document.service.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");
+import { uploadDir } from "../utils/upload-path.js";
 
 export async function upload(req: Request, res: Response) {
   if (!req.file) return res.status(400).json({ message: "A supported file is required" });
-  await mkdir(UPLOAD_DIR, { recursive: true });
+  await mkdir(uploadDir, { recursive: true });
   const type = req.file.originalname.split(".").pop()!.toLowerCase();
   const document = await Document.create({ tenantId: req.tenantId, name: req.file.originalname, type, originalUrl: req.file.path, uploadedBy: req.user!.id, metadata: { size: req.file.size } });
   void processDocument(String(document._id), String(req.tenantId), req.file.path, type);
