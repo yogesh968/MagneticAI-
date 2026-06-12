@@ -41,6 +41,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const token = localStorage.getItem("accessToken");
     if (!stored || !token) { router.replace("/login"); return; }
     const u = JSON.parse(stored);
+    // Superadmin belongs in /admin
+    if (u.role === "superadmin") { router.replace("/admin"); return; }
     setUser(u);
     const allowed = ALL_NAV.filter((n) => n.roles.includes(u.role));
     const isAllowed = allowed.some((n) => n.exact ? pathname === n.href : pathname.startsWith(n.href));

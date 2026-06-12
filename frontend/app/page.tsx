@@ -35,7 +35,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex items-center justify-center gap-4 flex-wrap">
             <Link
-              href="/login"
+              href="/admin/login"
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_2px_12px_0_rgb(37,99,235,0.5)] hover:bg-blue-500 transition-all hover:shadow-[0_4px_20px_0_rgb(37,99,235,0.6)] hover:-translate-y-0.5"
             >
               Open Admin Panel <ArrowRight size={15} />
@@ -65,11 +65,12 @@ export default function LandingPage() {
               /dashboard
             </div>
             <div className="text-xs text-slate-500 mb-1">Demo login</div>
-            <div className="rounded-lg bg-slate-900/60 border border-white/5 px-3 py-2 text-xs text-slate-300">
-              <span className="text-blue-400">admin@demo.com</span> · Demo@1234
+            <div className="rounded-lg bg-slate-900/60 border border-white/5 px-3 py-2 text-xs text-slate-300 space-y-1">
+              <div><span className="text-blue-400">admin@demo.com</span> · Demo@1234 <span className="text-slate-500 ml-1">(admin)</span></div>
+              <div><span className="text-emerald-400">agent@demo.com</span> · Demo@1234 <span className="text-slate-500 ml-1">(agent)</span></div>
             </div>
             <Link
-              href="/login"
+              href="/admin/login"
               className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 transition-colors"
             >
               Open Dashboard <ArrowRight size={13} />

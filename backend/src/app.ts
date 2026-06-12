@@ -38,6 +38,15 @@ app.get("/", (_req, res) => res.json({ status: "ok", service: "Magnetic AI API" 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.get("/favicon.ico", (_req, res) => res.status(204).end());
 
+// Serve widget.js with correct CORS + cache headers so it works on any domain
+app.get("/widget.js", (_req, res) => {
+  const widgetPath = new URL("../widget/widget.js", import.meta.url).pathname;
+  res.setHeader("Content-Type", "application/javascript");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cache-Control", "public, max-age=300"); // 5 min cache
+  res.sendFile(widgetPath);
+});
+
 app.use("/api", async (_req: Request, _res: Response, next: NextFunction) => {
   try {
     await initializeApp();
@@ -56,7 +65,6 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/config", configRouter);
 app.use("/api/widget", widgetRouter);
 app.use("/api/integrations", integrationRouter);
-app.use("/widget.js", express.static(new URL("../widget/widget.js", import.meta.url).pathname));
 app.use(errorHandler);
 
 let initPromise: Promise<void> | undefined;

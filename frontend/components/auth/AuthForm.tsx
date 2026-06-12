@@ -45,7 +45,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
         localStorage.setItem("refreshToken", data.refreshToken);
         if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
         toast.success(mode === "register" ? `Welcome aboard, ${data.user?.name ?? ""}!` : "Welcome back!");
-        router.push("/dashboard");
+        // Role-based redirect
+        const role = data.user?.role;
+        router.push(role === "superadmin" ? "/admin" : "/dashboard");
         return;
       }
       toast.success(data.message ?? "Done!");
@@ -229,7 +231,15 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
 
             <div className="mt-6 border-t border-slate-100 pt-6 text-center text-sm text-slate-500">
               {mode === "login" ? (
-                <>New here?{" "}<Link href="/register" className="font-semibold text-blue-600 hover:underline">Create an account</Link></>
+                <>
+                  New here?{" "}
+                  <Link href="/register" className="font-semibold text-blue-600 hover:underline">Create an account</Link>
+                  <div className="mt-3 pt-3 border-t border-slate-100">
+                    <Link href="/admin/login" className="text-xs text-slate-400 hover:text-violet-600 hover:underline transition-colors">
+                      🛡 Admin Portal →
+                    </Link>
+                  </div>
+                </>
               ) : mode === "register" ? (
                 <>Already have an account?{" "}<Link href="/login" className="font-semibold text-blue-600 hover:underline">Sign in</Link></>
               ) : (
