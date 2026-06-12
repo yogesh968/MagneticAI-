@@ -13,16 +13,16 @@ export async function register(req: Request, res: Response) {
   const { name, email, password, businessName } = req.body;
   const existing = await User.findOne({ email: email.toLowerCase() });
   if (existing) {
-    if (await bcrypt.compare(password, existing.passwordHash)) {
-      return res.json({ user: { id: existing._id, name: existing.name, email: existing.email, tenantId: existing.tenantId, role: existing.role }, ...tokens(existing) });
-    }
     return res.status(409).json({ message: "Email already registered. Please sign in instead." });
   }
   const slug = `${businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${crypto.randomBytes(3).toString("hex")}`;
   const tenant = await Tenant.create({ name: businessName, slug, email });
-  const user = await User.create({ tenantId: tenant._id, name, email, passwordHash: await bcrypt.hash(password, 12), role: "admin", isVerified: true });
-  await BotConfig.create({ tenantId: tenant._id });
-  res.status(201).json({ user: { id: user._id, name, email, tenantId: tenant._id, role: user.role }, ...tokens(user) });
+  const user = await User.create({ tenantId: tenant._id, name, email: email.toLowerCase(), passwordHash: await bcrypt.hash(password, 12), role: "admin", isVerified: true });
+  await BotConfig.create({
+    tenantId: tenant._id,
+    settings: { widgetColor: "#2563eb", widgetPosition: "bottom-right" },
+  });
+  res.status(201).json({ user: { id: user._id, name, email: user.email, tenantId: tenant._id, role: user.role }, ...tokens(user) });
 }
 
 export async function login(req: Request, res: Response) {

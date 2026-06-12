@@ -1,4 +1,5 @@
 // Cohere embed-english-v3.0 — 1024 dimensions, free tier 1000 calls/min
+export const VECTOR_SIZE = 1024;
 
 export async function embedText(input: string): Promise<number[] | null> {
   try {

@@ -1,6 +1,8 @@
 import "dotenv/config";
 import "express-async-errors";
 import { mkdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import http from "node:http";
 import cors from "cors";
 import express from "express";
@@ -18,15 +20,10 @@ import { ticketRouter } from "./routes/ticket.routes.js";
 import { integrationRouter } from "./routes/integration.routes.js";
 import { registerChatSocket } from "./socket/chat.socket.js";
 
-const origin = process.env.FRONTEND_URL ?? "http://localhost:3000";
-const isDev = process.env.NODE_ENV?.trim() !== "production";
-
-// Support multiple allowed origins (comma-separated in FRONTEND_URL)
-const allowedOrigins = origin.split(",").map((o) => o.trim()).filter(Boolean);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");
 
 const corsOptions: cors.CorsOptions = {
-  // Widget.js is served as a public script loaded by third-party sites — always allow *.
-  // Dashboard API calls also tolerate * in dev; in prod they include credentials=false so * is safe.
   origin: "*",
   credentials: false,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -56,7 +53,7 @@ app.use("/api/integrations", integrationRouter);
 app.use("/widget.js", express.static(new URL("../widget/widget.js", import.meta.url).pathname));
 app.use(errorHandler);
 
-await mkdir("/tmp/uploads", { recursive: true });
+await mkdir(UPLOAD_DIR, { recursive: true });
 await connectDB();
 
 const server = http.createServer(app);

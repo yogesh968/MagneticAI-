@@ -8,6 +8,7 @@ import { BotConfig, Conversation, Document, Message, Tenant, Ticket, User } from
 import { processDocument } from "./services/document.service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");
 
 await connectDB();
 
@@ -58,6 +59,7 @@ if (!configExists) {
     welcomeMessage: "Hi! I'm AcmeBot, your AI support assistant. How can I help you today?",
     personality: "friendly",
     isActive: true,
+    settings: { widgetColor: "#2563eb", widgetPosition: "bottom-right" },
     escalationRules: [
       { trigger: "refund", priority: "high" },
       { trigger: "legal", priority: "urgent" },
@@ -100,29 +102,27 @@ if (!configExists) {
 // ── Knowledge Base documents ─────────────────────────────────────────────────
 const docCount = await Document.countDocuments({ tenantId: tenant._id });
 if (docCount === 0) {
-  await mkdir("/tmp/uploads", { recursive: true });
+  await mkdir(UPLOAD_DIR, { recursive: true });
   const sampleFiles = [
     { name: "Refund Policy", file: "refund-policy.txt" },
     { name: "Shipping FAQ", file: "shipping-faq.txt" },
     { name: "Product Guide", file: "product-guide.txt" },
   ];
   for (const sample of sampleFiles) {
-    // ESM-safe path resolution — works locally and on Railway/Render
     const srcPath = resolve(__dirname, "../../sample-kb", sample.file);
-    const destPath = `/tmp/uploads/${sample.file}`;
+    const destPath = resolve(UPLOAD_DIR, sample.file);
     await copyFile(srcPath, destPath).catch(() => {});
-    const filePath = destPath;
     const doc = await Document.create({
       tenantId: tenant._id,
       name: `${sample.name}.txt`,
       type: "txt",
-      originalUrl: filePath,
+      originalUrl: destPath,
       status: "pending",
       uploadedBy: admin._id,
       metadata: { size: 1024 },
     });
     try {
-      await processDocument(String(doc._id), String(tenant._id), filePath, "txt");
+      await processDocument(String(doc._id), String(tenant._id), destPath, "txt");
       console.info(`[seed] indexed: ${sample.name}`);
     } catch (err) {
       console.warn(`[seed] could not index ${sample.name}:`, (err as Error).message);

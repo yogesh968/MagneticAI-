@@ -1,13 +1,25 @@
 import type { Request, Response } from "express";
 import { unlink } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { Document } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { processDocument } from "../services/document.service.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");
+
+import { mkdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");
+
 export async function upload(req: Request, res: Response) {
   if (!req.file) return res.status(400).json({ message: "A supported file is required" });
+  await mkdir(UPLOAD_DIR, { recursive: true });
   const type = req.file.originalname.split(".").pop()!.toLowerCase();
-  // Store only the filename, not the full absolute path — portable across deployments
   const document = await Document.create({ tenantId: req.tenantId, name: req.file.originalname, type, originalUrl: req.file.path, uploadedBy: req.user!.id, metadata: { size: req.file.size } });
   void processDocument(String(document._id), String(req.tenantId), req.file.path, type);
   res.status(202).json(document);
