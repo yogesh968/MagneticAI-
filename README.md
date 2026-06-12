@@ -1,4 +1,23 @@
-# Magnetic AI Support Platform
+<div align="center">
+
+# MAGNETIC AI
+### Multi-Tenant AI Customer Support Platform
+
+> A full-stack, RAG-powered support platform for automated customer answers, live agent handoff, ticketing, analytics, and embeddable chat.
+
+[![CI / Deploy](https://github.com/yogesh968/MagneticAI-/actions/workflows/deploy.yml/badge.svg)](https://github.com/yogesh968/MagneticAI-/actions/workflows/deploy.yml)
+![Node](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)
+![Qdrant](https://img.shields.io/badge/Qdrant-Vector_DB-dc244c)
+![Groq](https://img.shields.io/badge/Groq-LLM_Inference-f55036)
+![License](https://img.shields.io/badge/License-Not_Specified-lightgrey)
+
+</div>
+
+## Introduction
 
 Magnetic AI is a multi-tenant AI customer support platform for teams that want fast automated answers, reliable human handoff, and a clean dashboard for managing support operations. It combines a Next.js agent dashboard, an Express and Socket.IO API, MongoDB for application data, Qdrant for tenant-isolated vector search, Groq for LLM responses, and Cohere embeddings for retrieval.
 
@@ -6,6 +25,7 @@ The platform is designed for SaaS companies, agencies, and internal support team
 
 ## Table of Contents
 
+- [Introduction](#introduction)
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
