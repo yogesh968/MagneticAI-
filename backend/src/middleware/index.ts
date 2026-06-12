@@ -29,6 +29,8 @@ export const validate = (schema: ZodType) => (req: Request, _res: Response, next
 
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   if (error instanceof ZodError) return res.status(400).json({ message: "Validation failed", issues: error.flatten() });
+  if ((error as { type?: string }).type === "entity.too.large") return res.status(413).json({ message: "Payload too large" });
+  if ((error as { code?: string }).code === "LIMIT_FILE_SIZE") return res.status(413).json({ message: "Uploaded file is too large. Maximum size is 10MB." });
   if ((error as { name?: string }).name === "CastError") return res.status(400).json({ message: "Invalid resource identifier" });
   if ((error as { code?: number }).code === 11000) return res.status(409).json({ message: "A resource with that value already exists" });
   console.error(error);

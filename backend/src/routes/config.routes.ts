@@ -17,9 +17,9 @@ const botSchema = z.object({
 });
 
 export const configRouter = Router();
-configRouter.use(verifyJWT, extractTenant);
+configRouter.use(verifyJWT, extractTenant, rbacCheck("admin", "superadmin"));
 configRouter.get("/bot", getBotConfig);
-configRouter.put("/bot", rbacCheck("admin", "superadmin"), validate(botSchema), updateBotConfig);
+configRouter.put("/bot", validate(botSchema), updateBotConfig);
 configRouter.post("/test", validate(z.object({ question: z.string().min(1) })), testBot);
 
 export const widgetRouter = Router();

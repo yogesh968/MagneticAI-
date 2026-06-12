@@ -1,17 +1,11 @@
 import type { Request, Response } from "express";
 import { unlink } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { Document } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { processDocument } from "../services/document.service.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");
-
-import { mkdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? resolve(__dirname, "../../uploads");

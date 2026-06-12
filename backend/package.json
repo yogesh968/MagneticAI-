@@ -8,10 +8,10 @@
     "start": "node dist/server.js",
     "seed": "tsx src/seed.ts",
     "lint": "eslint src --ext .ts",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --forceExit",
-    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest tests/unit --forceExit",
-    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration --forceExit",
-    "test:ai": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration/chat.test --forceExit"
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest --forceExit",
+    "test:unit": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest tests/unit --forceExit",
+    "test:integration": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest tests/integration --forceExit",
+    "test:ai": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest tests/integration/chat.test --forceExit"
   },
   "jest": {
     "preset": "ts-jest/presets/default-esm",
@@ -26,11 +26,12 @@
       "^.+\\.tsx?$": [
         "ts-jest",
         {
-          "useESM": true
+          "useESM": true,
+          "tsconfig": "./tsconfig.test.json"
         }
       ]
     },
-    "setupFilesAfterFramework": [
+    "setupFilesAfterEnv": [
       "./tests/setup.ts"
     ],
     "testTimeout": 30000
