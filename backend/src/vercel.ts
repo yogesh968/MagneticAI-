@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { app } from "./app.js";
+import { app, initializeApp } from "./app.js";
 
 export default async function handler(req: Request, res: Response) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -11,5 +11,7 @@ export default async function handler(req: Request, res: Response) {
     return;
   }
 
+  // Ensure DB is connected on every cold start
+  await initializeApp();
   return app(req, res);
 }

@@ -6,19 +6,9 @@ import { StatCard, Badge } from "@/components/ui";
 import {
   MessageSquare, TicketCheck, TrendingUp, AlertTriangle,
   ArrowRight, Bot, Clock, BookOpen, Zap, Activity,
+  ShieldCheck, Headphones, Users, BarChart3, Code2,
 } from "lucide-react";
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
-interface Overview {
-  totalConversations: number;
-  openTickets: number;
-  resolvedTickets: number;
-  escalated: number;
-  resolutionRate: number;
-}
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const priorityTone: Record<string, string> = { low: "slate", medium: "cyan", high: "orange", urgent: "red" };
 const statusTone: Record<string, string> = { open: "blue", in_progress: "amber", resolved: "green", closed: "slate" };
@@ -39,58 +29,163 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [charts, setCharts] = useState<any[]>([]);
-  const [recentTickets, setRecentTickets] = useState<any[]>([]);
-  const [userName, setUserName] = useState("");
+// ─── Agent home view ──────────────────────────────────────────────────────────
+function AgentDashboard({ overview, recentTickets, userName, router }: any) {
+  const agentStats = [
+    { label: "Open Tickets",   value: overview.openTickets,     icon: <TicketCheck size={18} />, tone: "amber", delay: "d1", sub: "Needs your attention" },
+    { label: "Escalated",      value: overview.escalated,       icon: <AlertTriangle size={18} />, tone: "red",   delay: "d2", sub: "High priority" },
+    { label: "Conversations",  value: overview.totalConversations, icon: <MessageSquare size={18} />, tone: "blue", delay: "d3", sub: "All sessions" },
+    { label: "Resolved",       value: overview.resolvedTickets, icon: <TrendingUp size={18} />,  tone: "green", delay: "d4", sub: "Closed successfully" },
+  ];
 
-  useEffect(() => {
-    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-    setUserName(u.name ?? "");
-    api.get("/analytics/overview").then((r) => setOverview(r.data));
-    api.get("/analytics/charts").then((r) => setCharts(r.data));
-    api.get("/tickets", { params: { limit: 5 } }).then((r) => setRecentTickets(r.data.items ?? []));
-  }, []);
+  const quickActions = [
+    { label: "View Tickets",       icon: TicketCheck,   href: "/dashboard/tickets",       color: "amber",   desc: "Handle open tickets" },
+    { label: "Conversations",      icon: MessageSquare, href: "/dashboard/conversations", color: "blue",    desc: "Review all chats" },
+    { label: "Escalations",        icon: AlertTriangle, href: "/dashboard/escalations",   color: "red",     desc: "Urgent issues" },
+  ];
 
-  if (!overview) {
-    return (
-      <div className="p-6 space-y-5">
-        <div className="anim-up space-y-2">
-          <div className="skeleton h-7 w-56" />
-          <div className="skeleton h-4 w-72" />
+  return (
+    <div className="p-6 space-y-5 max-w-[1200px]">
+      {/* Header — green tint for agent */}
+      <div className="anim-up flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100">
+              <Headphones size={14} className="text-emerald-600" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-emerald-600">Agent Workspace</span>
+          </div>
+          <h1 className="page-title">
+            {userName ? `Hey, ${userName.split(" ")[0]} 👋` : "My Workspace"}
+          </h1>
+          <p className="page-sub">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · Your support queue
+          </p>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <div key={i} className={`skeleton h-32 rounded-2xl d${i + 1}`} />)}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="skeleton lg:col-span-2 h-64 rounded-2xl d5" />
-          <div className="skeleton h-64 rounded-2xl d6" />
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <Activity size={13} className="text-emerald-600" />
+            <span className="text-xs font-semibold text-emerald-700">{overview.openTickets} open tickets</span>
+          </div>
         </div>
       </div>
-    );
-  }
 
-  const stats = [
+      {/* Agent stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {agentStats.map((s) => <StatCard key={s.label} {...s} />)}
+      </div>
+
+      {/* Quick action cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 anim-up d3">
+        {quickActions.map(({ label, icon: Icon, href, color, desc }) => (
+          <button
+            key={href}
+            onClick={() => router.push(href)}
+            className={`group flex items-center gap-4 rounded-2xl border border-${color}-100 bg-${color}-50/50 p-4 text-left hover:shadow-md transition-all hover:-translate-y-0.5`}
+          >
+            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-${color}-100`}>
+              <Icon size={20} className={`text-${color}-600`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-slate-900">{label}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
+            </div>
+            <ArrowRight size={14} className="text-slate-300 group-hover:text-slate-500 shrink-0 transition-colors" />
+          </button>
+        ))}
+      </div>
+
+      {/* Recent tickets */}
+      {recentTickets.length > 0 && (
+        <div className="card anim-up d4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="section-title">My Queue</p>
+              <p className="text-xs text-slate-400 mt-0.5">Latest tickets awaiting action</p>
+            </div>
+            <button onClick={() => router.push("/dashboard/tickets")} className="btn-ghost btn-sm gap-1 text-emerald-600 hover:bg-emerald-50">
+              View all <ArrowRight size={12} />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {recentTickets.map((t: any, i: number) => (
+              <div
+                key={t._id}
+                onClick={() => router.push(`/dashboard/tickets/${t._id}`)}
+                className={`flex items-center gap-3.5 rounded-xl border border-transparent px-4 py-3 cursor-pointer hover:border-emerald-100 hover:bg-emerald-50/40 transition-all group anim-up d${Math.min(i + 1, 8)}`}
+              >
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-white group-hover:border group-hover:border-slate-200 transition-all">
+                  <TicketCheck size={14} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{t.subject}</p>
+                  <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
+                    <span className="font-mono text-emerald-600 font-semibold">{t.ticketNumber}</span>
+                    <span>·</span>
+                    <span>{t.customerName || "Unknown"}</span>
+                    <span>·</span>
+                    <Clock size={9} className="inline" />
+                    <span>{new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge tone={priorityTone[t.priority] ?? "slate"}>{t.priority}</Badge>
+                  <Badge tone={statusTone[t.status] ?? "slate"}>{t.status.replace("_", " ")}</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Agent role info */}
+      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/30 p-5 anim-up d5">
+        <div className="flex items-center gap-2 mb-2">
+          <Headphones size={15} className="text-emerald-600" />
+          <p className="text-sm font-semibold text-emerald-800">Agent Access</p>
+        </div>
+        <p className="text-xs text-emerald-700 leading-relaxed">
+          You have access to <strong>Tickets</strong>, <strong>Conversations</strong>, and <strong>Escalations</strong>.
+          Platform configuration (Knowledge Base, AI Config, Analytics, Widget) is managed by admins.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Admin home view ──────────────────────────────────────────────────────────
+function AdminDashboard({ overview, charts, recentTickets, userName, router }: any) {
+  const adminStats = [
     { label: "Conversations",  value: overview.totalConversations, icon: <MessageSquare size={18} />, tone: "blue",  delay: "d1", sub: "All time" },
     { label: "Open Tickets",   value: overview.openTickets,        icon: <TicketCheck size={18} />,  tone: "amber", delay: "d2", sub: "Awaiting action" },
     { label: "Resolved",       value: overview.resolvedTickets,    icon: <TrendingUp size={18} />,   tone: "green", delay: "d3", sub: "Successfully closed" },
     { label: "Escalated",      value: overview.escalated,          icon: <AlertTriangle size={18} />,tone: "red",   delay: "d4", sub: "Auto-escalated" },
   ];
 
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const adminLinks = [
+    { label: "Knowledge Base", icon: BookOpen,    href: "/dashboard/knowledge-base", color: "blue",   desc: "Manage docs & indexing" },
+    { label: "Analytics",      icon: BarChart3,   href: "/dashboard/analytics",      color: "purple", desc: "Platform metrics" },
+    { label: "Team",           icon: Users,       href: "/dashboard/team",           color: "indigo", desc: "Manage agents" },
+    { label: "Widget",         icon: Code2,       href: "/dashboard/widget",         color: "violet", desc: "Embed settings" },
+  ];
 
   return (
     <div className="p-6 space-y-5 max-w-[1400px]">
-
-      {/* ── Header ── */}
+      {/* Header — blue tint for admin */}
       <div className="anim-up flex items-start justify-between gap-4">
         <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100">
+              <ShieldCheck size={14} className="text-blue-600" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-blue-600">Admin Dashboard</span>
+          </div>
           <h1 className="page-title">
             {userName ? `Welcome back, ${userName.split(" ")[0]}` : "Overview"}
           </h1>
-          <p className="page-sub">{today} · Your support platform at a glance</p>
+          <p className="page-sub">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · Platform overview
+          </p>
         </div>
         <div className="hidden sm:flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
@@ -100,15 +195,32 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
+      {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => <StatCard key={s.label} {...s} />)}
+        {adminStats.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
 
-      {/* ── Chart + Resolution ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      {/* Admin quick links */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 anim-up d3">
+        {adminLinks.map(({ label, icon: Icon, href, color, desc }) => (
+          <button
+            key={href}
+            onClick={() => router.push(href)}
+            className="group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-4 text-left hover:border-blue-200 hover:shadow-md transition-all hover:-translate-y-0.5"
+          >
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-${color}-50 border border-${color}-100`}>
+              <Icon size={16} className={`text-${color}-600`} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900 leading-tight">{label}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{desc}</p>
+            </div>
+          </button>
+        ))}
+      </div>
 
-        {/* Area chart */}
+      {/* Chart + resolution ring */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 card anim-up d5">
           <div className="flex items-center justify-between mb-5">
             <div>
@@ -116,12 +228,8 @@ export default function DashboardPage() {
               <p className="text-xs text-slate-400 mt-0.5">Last 30 days — conversations & escalations</p>
             </div>
             <div className="flex gap-4 text-xs font-medium">
-              <span className="flex items-center gap-1.5 text-slate-500">
-                <span className="h-2 w-3 rounded-full bg-blue-500" /> Conversations
-              </span>
-              <span className="flex items-center gap-1.5 text-slate-500">
-                <span className="h-2 w-3 rounded-full bg-red-400" /> Escalations
-              </span>
+              <span className="flex items-center gap-1.5 text-slate-500"><span className="h-2 w-3 rounded-full bg-blue-500" /> Conversations</span>
+              <span className="flex items-center gap-1.5 text-slate-500"><span className="h-2 w-3 rounded-full bg-red-400" /> Escalations</span>
             </div>
           </div>
           {charts.length === 0 ? (
@@ -159,7 +267,6 @@ export default function DashboardPage() {
         <div className="card anim-up d6 flex flex-col">
           <p className="section-title">AI Resolution Rate</p>
           <p className="text-xs text-slate-400 mt-0.5 mb-5">Resolved without human handoff</p>
-
           <div className="flex-1 flex flex-col items-center justify-center">
             <div className="relative flex items-center justify-center">
               <svg width={136} height={136} viewBox="0 0 136 136" className="-rotate-90">
@@ -167,8 +274,7 @@ export default function DashboardPage() {
                 <circle
                   cx="68" cy="68" r="56" fill="none"
                   stroke={overview.resolutionRate >= 70 ? "#22c55e" : overview.resolutionRate >= 40 ? "#f59e0b" : "#ef4444"}
-                  strokeWidth="12"
-                  strokeLinecap="round"
+                  strokeWidth="12" strokeLinecap="round"
                   strokeDasharray={`${2 * Math.PI * 56}`}
                   strokeDashoffset={`${2 * Math.PI * 56 * (1 - overview.resolutionRate / 100)}`}
                   className="transition-all duration-1000 ease-out"
@@ -180,7 +286,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
           <div className="mt-4 grid grid-cols-2 gap-2.5">
             <div className={`rounded-xl px-3 py-2.5 text-center ${overview.resolutionRate >= 80 ? "bg-emerald-50 border border-emerald-100" : "bg-slate-50 border border-slate-100"}`}>
               <p className={`text-base font-bold ${overview.resolutionRate >= 80 ? "text-emerald-700" : "text-slate-700"}`}>80%</p>
@@ -196,7 +301,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Recent Tickets ── */}
+      {/* Recent tickets */}
       {recentTickets.length > 0 && (
         <div className="card anim-up d7">
           <div className="flex items-center justify-between mb-4">
@@ -204,10 +309,7 @@ export default function DashboardPage() {
               <p className="section-title">Recent Tickets</p>
               <p className="text-xs text-slate-400 mt-0.5">Latest support tickets across all conversations</p>
             </div>
-            <button
-              onClick={() => router.push("/dashboard/tickets")}
-              className="btn-ghost btn-sm gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
+            <button onClick={() => router.push("/dashboard/tickets")} className="btn-ghost btn-sm gap-1 text-blue-600 hover:bg-blue-50">
               View all <ArrowRight size={12} />
             </button>
           </div>
@@ -216,19 +318,17 @@ export default function DashboardPage() {
               <div
                 key={t._id}
                 onClick={() => router.push(`/dashboard/tickets/${t._id}`)}
-                className={`flex items-center gap-3.5 rounded-xl border border-transparent px-4 py-3 cursor-pointer hover:border-blue-100 hover:bg-blue-50/40 transition-all duration-150 group anim-up d${Math.min(i + 1, 8)}`}
+                className={`flex items-center gap-3.5 rounded-xl border border-transparent px-4 py-3 cursor-pointer hover:border-blue-100 hover:bg-blue-50/40 transition-all group anim-up d${Math.min(i + 1, 8)}`}
               >
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 group-hover:bg-white group-hover:border group-hover:border-slate-200 transition-all">
                   <TicketCheck size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate leading-tight">{t.subject}</p>
+                  <p className="text-sm font-semibold text-slate-900 truncate">{t.subject}</p>
                   <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1.5">
                     <span className="font-mono text-blue-600 font-semibold">{t.ticketNumber}</span>
-                    <span>·</span>
-                    <span>{t.customerName || "Unknown"}</span>
-                    <span>·</span>
-                    <Clock size={9} className="inline" />
+                    <span>·</span><span>{t.customerName || "Unknown"}</span>
+                    <span>·</span><Clock size={9} className="inline" />
                     <span>{new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                   </p>
                 </div>
@@ -242,11 +342,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Empty / Onboarding state ── */}
+      {/* Empty state */}
       {overview.totalConversations === 0 && (
         <div className="card border-2 border-dashed border-slate-200 bg-slate-50/30 anim-up d7">
           <div className="flex flex-col items-center py-10 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100 mb-4 shadow-sm">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100 mb-4">
               <Zap size={24} className="text-blue-600" />
             </div>
             <p className="text-base font-bold text-slate-800">Ready to go live</p>
@@ -266,4 +366,46 @@ export default function DashboardPage() {
       )}
     </div>
   );
+}
+
+// ─── Main page (role switcher) ────────────────────────────────────────────────
+export default function DashboardPage() {
+  const router = useRouter();
+  const [overview, setOverview] = useState<any>(null);
+  const [charts, setCharts] = useState<any[]>([]);
+  const [recentTickets, setRecentTickets] = useState<any[]>([]);
+  const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
+    setUserInfo({ name: u.name ?? "", role: u.role ?? "agent" });
+    api.get("/analytics/overview").then((r) => setOverview(r.data));
+    api.get("/analytics/charts").then((r) => setCharts(r.data));
+    api.get("/tickets", { params: { limit: 5 } }).then((r) => setRecentTickets(r.data.items ?? []));
+  }, []);
+
+  if (!overview) {
+    return (
+      <div className="p-6 space-y-5">
+        <div className="anim-up space-y-2">
+          <div className="skeleton h-5 w-28" />
+          <div className="skeleton h-7 w-56" />
+          <div className="skeleton h-4 w-72" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <div key={i} className={`skeleton h-32 rounded-2xl d${i + 1}`} />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="skeleton lg:col-span-2 h-64 rounded-2xl d5" />
+          <div className="skeleton h-64 rounded-2xl d6" />
+        </div>
+      </div>
+    );
+  }
+
+  const props = { overview, charts, recentTickets, userName: userInfo?.name ?? "", router };
+
+  return userInfo?.role === "agent"
+    ? <AgentDashboard {...props} />
+    : <AdminDashboard {...props} />;
 }

@@ -1,6 +1,8 @@
 import "dotenv/config";
 import "express-async-errors";
 import { mkdir } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import type { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import express from "express";
@@ -16,6 +18,9 @@ import { integrationRouter } from "./routes/integration.routes.js";
 import { kbRouter } from "./routes/kb.routes.js";
 import { ticketRouter } from "./routes/ticket.routes.js";
 import { uploadDir } from "./utils/upload-path.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = dirname(__filename);
 
 const corsOptions: cors.CorsOptions = {
   origin: "*",
@@ -38,12 +43,12 @@ app.get("/", (_req, res) => res.json({ status: "ok", service: "Magnetic AI API" 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.get("/favicon.ico", (_req, res) => res.status(204).end());
 
-// Serve widget.js with correct CORS + cache headers so it works on any domain
+// Serve widget.js — use resolve() so path works after tsc compilation on any platform
 app.get("/widget.js", (_req, res) => {
-  const widgetPath = new URL("../widget/widget.js", import.meta.url).pathname;
+  const widgetPath = resolve(__dirname, "../../widget/widget.js");
   res.setHeader("Content-Type", "application/javascript");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Cache-Control", "public, max-age=300"); // 5 min cache
+  res.setHeader("Cache-Control", "public, max-age=300");
   res.sendFile(widgetPath);
 });
 
@@ -71,7 +76,8 @@ let initPromise: Promise<void> | undefined;
 
 export function initializeApp() {
   initPromise ??= Promise.all([
-    mkdir(uploadDir, { recursive: true }),
+    // mkdir may fail on read-only filesystems (Vercel) — swallow the error
+    mkdir(uploadDir, { recursive: true }).catch(() => undefined),
     connectDB(),
   ]).then(() => undefined);
 

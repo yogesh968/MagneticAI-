@@ -8,11 +8,11 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { href: "/admin",         label: "Overview",       icon: LayoutDashboard, exact: true },
-  { href: "/admin/tenants", label: "Tenants",         icon: Building2 },
-  { href: "/admin/users",   label: "All Users",       icon: Users },
-  { href: "/admin/stats",   label: "Platform Stats",  icon: BarChart3 },
-  { href: "/admin/system",  label: "System",          icon: Settings },
+  { href: "/admin",         label: "Overview",      icon: LayoutDashboard, exact: true },
+  { href: "/admin/tenants", label: "Tenants",        icon: Building2 },
+  { href: "/admin/users",   label: "All Users",      icon: Users },
+  { href: "/admin/stats",   label: "Platform Stats", icon: BarChart3 },
+  { href: "/admin/system",  label: "System",         icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -20,10 +20,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router   = useRouter();
   const [user, setUser] = useState<any>(null);
 
-  // Login page — render bare (no sidebar)
-  if (pathname === "/admin/login") return <>{children}</>;
+  const isLoginPage = pathname === "/admin/login";
 
+  // All hooks MUST be called unconditionally — guard logic inside effect
   useEffect(() => {
+    if (isLoginPage) return; // skip auth check on login page itself
     const stored = localStorage.getItem("user");
     const token  = localStorage.getItem("accessToken");
     if (!stored || !token) { router.replace("/admin/login"); return; }
@@ -33,7 +34,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
     setUser(u);
-  }, [router, pathname]);
+  }, [router, pathname, isLoginPage]);
+
+  // Login page — render bare with no sidebar
+  if (isLoginPage) return <>{children}</>;
 
   const logout = () => { localStorage.clear(); router.replace("/admin/login"); };
 
@@ -124,9 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </nav>
           <div className="flex items-center gap-3">
-            {user && (
-              <span className="text-xs text-slate-500 font-medium">{user.name}</span>
-            )}
+            {user && <span className="text-xs text-slate-500 font-medium">{user.name}</span>}
             <span className="flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-200/60 px-3 py-1.5 text-[11px] font-bold text-violet-700 uppercase tracking-wider">
               <ShieldCheck size={11} /> Admin Portal
             </span>
