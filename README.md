@@ -22,27 +22,6 @@
 Magnetic AI is a multi-tenant AI customer support platform for teams that want fast automated answers, reliable human handoff, and a clean dashboard for managing support operations. It combines a Next.js agent dashboard, an Express and Socket.IO API, MongoDB for application data, Qdrant for tenant-isolated vector search, Groq for LLM responses, and Cohere embeddings for retrieval.
 
 The platform is designed for SaaS companies, agencies, and internal support teams that need a self-hostable support desk with Retrieval-Augmented Generation (RAG), embeddable chat, ticket management, analytics, and configurable escalation rules.
-
-## Table of Contents
-
-- [Introduction](#introduction)
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Environment Variables](#environment-variables)
-- [Local Development](#local-development)
-- [Demo Accounts](#demo-accounts)
-- [Available Scripts](#available-scripts)
-- [API Reference](#api-reference)
-- [Widget Embed](#widget-embed)
-- [Knowledge Base Workflow](#knowledge-base-workflow)
-- [Testing](#testing)
-- [Deployment Notes](#deployment-notes)
-- [Roadmap](#roadmap)
-
 ## Overview
 
 Magnetic AI helps support teams answer customer questions from their own knowledge base while keeping humans close when automation is not enough. Each tenant can upload documents, configure bot behavior, customize widget settings, review conversations, manage tickets, and monitor support performance from a single dashboard.
