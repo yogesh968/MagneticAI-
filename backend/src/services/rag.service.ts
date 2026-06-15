@@ -2,18 +2,14 @@ import { BotConfig, Tenant } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { embedQuery } from "./embedding.service.js";
 import { groq } from "../config/groq.js";
-
 export type RagResult = { answer: string; hasContext: boolean; documentsReferenced: string[] };
-
 const NO_CONTEXT_ANSWER =
   "I couldn't find that information in our knowledge base. I'll create a support ticket so our team can follow up with you directly.";
-
 const MODELS = [
   "llama-3.3-70b-versatile",
   "llama-3.1-70b-versatile",
   "llama-3.1-8b-instant",
 ];
-
 async function callGroqWithRetry(
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   stream: false,
@@ -58,7 +54,6 @@ async function callGroqWithRetry(
     throw err;
   }
 }
-
 async function getPersona(tenantId: string) {
   const [config, tenant] = await Promise.all([
     BotConfig.findOne({ tenantId }).lean<any>(),
@@ -66,27 +61,24 @@ async function getPersona(tenantId: string) {
   ]);
   return { config, tenant };
 }
-
 async function prepareRag(tenantId: string, query: string) {
   const [vector, { config, tenant }] = await Promise.all([
     embedQuery(query),
     getPersona(tenantId),
   ]);
-
   const botName = config?.botName ?? "Support Assistant";
   const personality = config?.personality ?? "professional";
   const bizName = tenant?.name ?? "this business";
   const escalationRules = JSON.stringify(config?.escalationRules ?? []);
-
   if (!vector) {
     return {
       hasContext: false,
       fallback: true,
       documentsReferenced: [] as string[],
       system: `You are ${botName}, a ${personality} customer support assistant for ${bizName}. Be helpful and concise. If you cannot answer, say a ticket will be created.`,
+      system: `You are ${botName}, a ${personality} customer support assistant for ${bizName}. Be helpful and concise. You may answer any general questions if they are off-topic.`,
     };
   }
-
   let hits: Awaited<ReturnType<typeof qdrant.search>> = [];
   try {
     hits = await qdrant.search(collectionName(tenantId), {
@@ -98,40 +90,39 @@ async function prepareRag(tenantId: string, query: string) {
   } catch {
     hits = [];
   }
-
   const context = hits
     .map((h) => String(h.payload?.text ?? ""))
     .filter(Boolean)
     .join("\n\n---\n\n");
-
   if (!context) {
     return { hasContext: false, fallback: false, documentsReferenced: [] as string[], system: undefined };
+    return { 
+      hasContext: false, 
+      fallback: true, 
+      documentsReferenced: [] as string[], 
+      system: `You are ${botName}, a ${personality} customer support assistant for ${bizName}. Be helpful and concise. You may answer any general questions if they are off-topic.` 
+    };
   }
-
   const system = `You are ${botName}, a ${personality} customer support assistant for ${bizName}.
 Answer ONLY using the knowledge base context provided below. Be concise and helpful.
 If the answer is not in the context, say: "I'll create a support ticket for our team to follow up."
 Do not make up information. Format responses clearly with markdown when helpful.
-
+You are provided with knowledge base context below. Use it if relevant.
+If the query is off-topic or the answer is not in the context, you can use your general knowledge to answer it.
+Do not make up information about the business itself. Format responses clearly with markdown when helpful.
 Knowledge Base Context:
 ${context}
-
 Escalation triggers: ${escalationRules}`;
-
   const documentsReferenced = [
     ...new Set(hits.map((x) => String(x.payload?.documentId ?? "")).filter(Boolean)),
   ];
-
   return { hasContext: true, fallback: false, documentsReferenced, system };
 }
-
 export async function answerWithRag(tenantId: string, query: string): Promise<RagResult> {
   const rag = await prepareRag(tenantId, query);
-
   if (!rag.hasContext && !rag.fallback) {
     return { answer: NO_CONTEXT_ANSWER, hasContext: false, documentsReferenced: [] };
   }
-
   const answer = await callGroqWithRetry(
     [
       { role: "system", content: rag.system! },
@@ -139,22 +130,18 @@ export async function answerWithRag(tenantId: string, query: string): Promise<Ra
     ],
     false,
   );
-
   return { answer, hasContext: rag.hasContext, documentsReferenced: rag.documentsReferenced };
 }
-
 export async function streamAnswerWithRag(
   tenantId: string,
   query: string,
   onToken: (token: string) => void,
 ): Promise<RagResult> {
   const rag = await prepareRag(tenantId, query);
-
   if (!rag.hasContext && !rag.fallback) {
     onToken(NO_CONTEXT_ANSWER);
     return { answer: NO_CONTEXT_ANSWER, hasContext: false, documentsReferenced: [] };
   }
-
   const stream = await callGroqWithRetry(
     [
       { role: "system", content: rag.system! },
@@ -162,7 +149,6 @@ export async function streamAnswerWithRag(
     ],
     true,
   );
-
   let answer = "";
   for await (const part of stream) {
     const token = part.choices[0]?.delta?.content ?? "";
@@ -171,7 +157,6 @@ export async function streamAnswerWithRag(
       onToken(token);
     }
   }
-
   return {
     answer: answer || NO_CONTEXT_ANSWER,
     hasContext: rag.hasContext,
