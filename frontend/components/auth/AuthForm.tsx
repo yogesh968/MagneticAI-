@@ -119,11 +119,20 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
         <div className="relative">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm">
             <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-3">Demo credentials</p>
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-300">D</div>
-              <div>
-                <p className="text-sm font-medium text-white">admin@demo.com</p>
-                <p className="text-xs text-slate-400">Password: Demo@1234</p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/20 text-sm font-bold text-blue-300">A</div>
+                <div>
+                  <p className="text-sm font-medium text-white">admin@demo.com <span className="text-xs text-slate-400 ml-1">(admin)</span></p>
+                  <p className="text-xs text-slate-400">Password: Demo@1234</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-300">S</div>
+                <div>
+                  <p className="text-sm font-medium text-white">agent@demo.com <span className="text-xs text-slate-400 ml-1">(agent)</span></p>
+                  <p className="text-xs text-slate-400">Password: Demo@1234</p>
+                </div>
               </div>
             </div>
           </div>

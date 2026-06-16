@@ -45,7 +45,9 @@ app.get("/favicon.ico", (_req, res) => res.status(204).end());
 
 // Serve widget.js — use resolve() so path works after tsc compilation on any platform
 app.get("/widget.js", (_req, res) => {
-  const widgetPath = resolve(__dirname, "../../widget/widget.js");
+  // In dev  (tsx): __dirname = backend/src  → ../widget/widget.js = backend/widget/widget.js ✓
+  // In prod (tsc): __dirname = backend/dist → ../widget/widget.js = backend/widget/widget.js ✓
+  const widgetPath = resolve(__dirname, "../widget/widget.js");
   res.setHeader("Content-Type", "application/javascript");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "public, max-age=300");

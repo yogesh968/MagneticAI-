@@ -15,9 +15,10 @@
   const root = host.attachShadow({ mode: "open" });
 
   // ── State ───────────────────────────────────────────────────────────────
+  const STORAGE_KEY = `magnetic_session_${tenantId}`;
   let config = null;
-  let sessionId = null;
-  let conversationId = null;
+  let sessionId = sessionStorage.getItem(STORAGE_KEY + "_sid") || null;
+  let conversationId = sessionStorage.getItem(STORAGE_KEY + "_cid") || null;
   let isOpen = false;
   let isHumanActive = false;
   let socket = null;
@@ -138,6 +139,7 @@
                 const newConvId = data.message.conversationId;
                 if (!conversationId) {
                   conversationId = newConvId;
+                  sessionStorage.setItem(STORAGE_KEY + "_cid", conversationId);
                   connectSocket();
                 }
               }
@@ -431,20 +433,41 @@
         chipsEl.style.display = "none";
       }
 
-      // ── Create session ────────────────────────────────────────────────────
-      const sessRes = await fetch(`${API}/api/chat/session`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        mode: "cors",
-        body: JSON.stringify({ tenantId }),
-      });
-      if (!sessRes.ok) throw new Error(`Session error: ${sessRes.status}`);
-      const sessData = await sessRes.json();
-      sessionId      = sessData.sessionId;
-      conversationId = sessData.conversationId ?? null;
-
-      // Connect socket only when we have a real conversation
-      if (conversationId) connectSocket();
+      // ── Create or restore session ─────────────────────────────────────────
+      if (sessionId && conversationId) {
+        // Resume existing session — restore previous messages
+        try {
+          const histRes = await fetch(`${API}/api/chat/history/${sessionId}?tenantId=${tenantId}`, { mode: "cors" });
+          if (histRes.ok) {
+            const histData = await histRes.json();
+            const prevMsgs = histData.messages ?? [];
+            if (prevMsgs.length > 0) {
+              // Clear the welcome message and render history
+              msgs().innerHTML = "";
+              prevMsgs.forEach((m) => addMsg(m.content, m.role === "user" ? "user" : "bot"));
+            }
+          }
+        } catch {}
+        // Reconnect socket for live updates
+        connectSocket();
+      } else {
+        // Start a brand new session
+        const sessRes = await fetch(`${API}/api/chat/session`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          mode: "cors",
+          body: JSON.stringify({ tenantId }),
+        });
+        if (!sessRes.ok) throw new Error(`Session error: ${sessRes.status}`);
+        const sessData = await sessRes.json();
+        sessionId      = sessData.sessionId;
+        conversationId = sessData.conversationId ?? null;
+        // Persist to sessionStorage
+        if (sessionId)      sessionStorage.setItem(STORAGE_KEY + "_sid", sessionId);
+        if (conversationId) sessionStorage.setItem(STORAGE_KEY + "_cid", conversationId);
+        // Connect socket only when we have a real conversation
+        if (conversationId) connectSocket();
+      }
 
       // ── Toggle ──────────────────────────────────────────────────────────
       $(".toggle").onclick = () => setOpen(!isOpen);

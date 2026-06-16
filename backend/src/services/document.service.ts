@@ -10,6 +10,12 @@ export async function processDocument(documentId: string, tenantId: string, path
     const chunks = chunkText(await parseDocument(path, type));
     const collection = await ensureCollection(tenantId);
 
+    // Delete existing vectors for this document in case of re-indexing
+    await qdrant.delete(collection, {
+      wait: true,
+      filter: { must: [{ key: "documentId", match: { value: documentId } }] },
+    }).catch(() => undefined);
+
     let indexedCount = 0;
     for (let index = 0; index < chunks.length; index++) {
       const text = chunks[index]!;
