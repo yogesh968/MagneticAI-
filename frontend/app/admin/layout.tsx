@@ -57,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
           <div>
             <p className="text-[14px] font-bold text-white leading-none">Admin Portal</p>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-400 mt-0.5">Magnetic AI</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-400 mt-0.5">Magentic AI</p>
           </div>
         </div>
 

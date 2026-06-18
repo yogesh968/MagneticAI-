@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
             <ShieldCheck size={20} className="text-white" />
           </div>
           <div>
-            <p className="text-[15px] font-bold text-white leading-none">Magnetic AI</p>
+            <p className="text-[15px] font-bold text-white leading-none">Magentic AI</p>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-400 mt-0.5">Admin Portal</p>
           </div>
         </div>

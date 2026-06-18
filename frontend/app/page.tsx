@@ -22,7 +22,7 @@ export default function LandingPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-[0_4px_24px_0_rgb(37,99,235,0.5)]">
               <Zap size={22} className="text-white" fill="white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">Magnetic AI</span>
+            <span className="text-2xl font-bold tracking-tight">Magentic AI</span>
           </div>
           <h1 className="text-5xl font-extrabold tracking-tight leading-tight">
             AI-Powered Customer Support
@@ -167,7 +167,7 @@ export default function LandingPage() {
         </div>
 
         <p className="mt-10 text-center text-xs text-slate-600">
-          Magnetic AI Support Platform · Built with Next.js + Express + MongoDB + Qdrant
+          Magentic AI Support Platform · Built with Next.js + Express + MongoDB + Qdrant
         </p>
       </div>
     </main>

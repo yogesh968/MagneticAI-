@@ -121,7 +121,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Zap size={15} className="text-white" fill="white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-white leading-none">Magnetic AI</p>
+            <p className="text-[13px] font-bold text-white leading-none">Magentic AI</p>
             <p className="text-[10px] font-medium text-white/60 mt-0.5">{theme.platformLabel}</p>
           </div>
           <button onClick={() => setMobileOpen(false)} className="md:hidden rounded-lg p-1 text-white/60 hover:text-white hover:bg-white/10">

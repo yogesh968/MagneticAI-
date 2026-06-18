@@ -49,7 +49,7 @@ export default function WidgetPage() {
     }
   };
 
-  const snippet = `<!-- Magnetic AI Widget -->\n<script src="${API_URL}/widget.js" data-tenant-id="${tenantId}"></script>`;
+  const snippet = `<!-- Magentic AI Widget -->\n<script src="${API_URL}/widget.js" data-tenant-id="${tenantId}"></script>`;
 
   const copySnippet = async () => {
     await navigator.clipboard.writeText(snippet);

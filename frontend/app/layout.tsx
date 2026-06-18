@@ -3,7 +3,7 @@ import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Magnetic AI", template: "%s · Magnetic AI" },
+  title: { default: "Magentic AI", template: "%s · Magentic AI" },
   description: "AI-powered multi-tenant customer support platform",
 };
 
