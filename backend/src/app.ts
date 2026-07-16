@@ -17,6 +17,7 @@ import { conversationRouter } from "./routes/conversation.routes.js";
 import { integrationRouter } from "./routes/integration.routes.js";
 import { kbRouter } from "./routes/kb.routes.js";
 import { ticketRouter } from "./routes/ticket.routes.js";
+import { paymentRouter } from "./routes/payment.routes.js";
 import { uploadDir } from "./utils/upload-path.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,7 +27,7 @@ const corsOptions: cors.CorsOptions = {
   origin: "*",
   credentials: false,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-razorpay-signature"],
   optionsSuccessStatus: 200,
 };
 
@@ -36,7 +37,7 @@ export const app = express();
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use((helmetPkg as any)({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "1mb", verify: (req: any, res, buf) => { req.rawBody = buf; } })); // Added rawBody for webhook
 app.use(express.urlencoded({ extended: true, limit: "1mb" })); // Twilio sends form-encoded webhooks
 
 app.get("/", (_req, res) => res.json({ status: "ok", service: "Magnetic AI API" }));
@@ -72,6 +73,7 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/config", configRouter);
 app.use("/api/widget", widgetRouter);
 app.use("/api/integrations", integrationRouter);
+app.use("/api/payment", paymentRouter);
 app.use(errorHandler);
 
 let initPromise: Promise<void> | undefined;

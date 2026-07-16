@@ -29,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const token  = localStorage.getItem("accessToken");
     if (!stored || !token) { router.replace("/admin/login"); return; }
     const u = JSON.parse(stored);
-    if (!["admin", "superadmin"].includes(u.role)) {
+    if (u.role !== "superadmin") {
       router.replace("/dashboard");
       return;
     }

@@ -26,8 +26,8 @@ export default function AdminLoginPage() {
       const { data } = await api.post("/auth/login", values);
       if (!data.accessToken) { toast.error("Login failed"); return; }
       const role = data.user?.role;
-      if (!["admin", "superadmin"].includes(role)) {
-        toast.error("Access denied. This portal is for admins only.");
+      if (role !== "superadmin") {
+        toast.error("Access denied. This portal is for superadmins only.");
         return;
       }
       localStorage.setItem("accessToken", data.accessToken);
@@ -87,16 +87,7 @@ export default function AdminLoginPage() {
           </div>
         </div>
 
-        <div className="relative rounded-xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Demo admin account</p>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-sm font-bold text-white">A</div>
-            <div>
-              <p className="text-sm font-semibold text-white">admin@demo.com</p>
-              <p className="text-xs text-slate-500">Password: Demo@1234</p>
-            </div>
-          </div>
-        </div>
+        {/* Removed demo credentials for production */}
       </div>
 
       {/* Right form panel */}

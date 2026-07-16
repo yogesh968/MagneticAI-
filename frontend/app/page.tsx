@@ -64,10 +64,9 @@ export default function LandingPage() {
             <div className="rounded-lg bg-slate-900/60 border border-white/5 px-3 py-2 font-mono text-xs text-slate-300 truncate mb-4">
               /dashboard
             </div>
-            <div className="text-xs text-slate-500 mb-1">Demo login</div>
+            <div className="text-xs text-slate-500 mb-1">Status</div>
             <div className="rounded-lg bg-slate-900/60 border border-white/5 px-3 py-2 text-xs text-slate-300 space-y-1">
-              <div><span className="text-blue-400">admin@demo.com</span> · Demo@1234 <span className="text-slate-500 ml-1">(admin)</span></div>
-              <div><span className="text-emerald-400">agent@demo.com</span> · Demo@1234 <span className="text-slate-500 ml-1">(agent)</span></div>
+              <div><span className="text-blue-400">Production Ready</span></div>
             </div>
             <Link
               href="/admin/login"

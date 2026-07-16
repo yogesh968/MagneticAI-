@@ -1,57 +1,42 @@
 import { BotConfig, Tenant } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { embedQuery } from "./embedding.service.js";
-import { groq } from "../config/groq.js";
+import { GroqProvider } from "./ai/groq.provider.js";
+import { FallbackProvider } from "./ai/fallback.provider.js";
+import { ChatMessage } from "./ai/ai-provider.interface.js";
 export type RagResult = { answer: string; hasContext: boolean; documentsReferenced: string[] };
 
-const MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-70b-versatile",
-  "llama-3.1-8b-instant",
-];
+const primaryProvider = new GroqProvider();
+const fallbackProvider = new FallbackProvider();
 
-async function callGroqWithRetry(
-  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+async function callProviderWithFallback(
+  messages: ChatMessage[],
   stream: false,
-  attempt?: number,
 ): Promise<string>;
-async function callGroqWithRetry(
-  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+async function callProviderWithFallback(
+  messages: ChatMessage[],
   stream: true,
-  attempt?: number,
 ): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>>;
-async function callGroqWithRetry(
-  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  doStream: boolean,
-  attempt = 0,
+async function callProviderWithFallback(
+  messages: ChatMessage[],
+  stream: boolean,
 ): Promise<any> {
-  const model = MODELS[Math.min(attempt, MODELS.length - 1)]!;
   try {
-    if (doStream) {
-      return await groq.chat.completions.create({
-        model,
-        max_tokens: 1024,
-        temperature: 0.3,
-        stream: true,
-        messages,
-      });
+    if (stream) {
+      return await primaryProvider.streamChat(messages);
     }
-    const res = await groq.chat.completions.create({
-      model,
-      max_tokens: 1024,
-      temperature: 0.3,
-      stream: false,
-      messages,
-    });
-    return res.choices[0]?.message.content ?? "I'm here to help! Could you please rephrase your question?";
+    return await primaryProvider.chat(messages);
   } catch (err: any) {
-    if (err?.status === 429 && attempt < MODELS.length - 1) {
-      const delay = Math.pow(2, attempt) * 1000;
-      console.warn(`[rag] rate limited on ${model}, retrying in ${delay}ms…`);
-      await new Promise((r) => setTimeout(r, delay));
-      return callGroqWithRetry(messages as any, doStream as any, attempt + 1);
+    console.error("[rag] Primary AI provider failed, falling back:", err?.message || err);
+    try {
+      if (stream) {
+        return await fallbackProvider.streamChat(messages);
+      }
+      return await fallbackProvider.chat(messages);
+    } catch (fallbackErr: any) {
+      console.error("[rag] Fallback AI provider also failed:", fallbackErr?.message || fallbackErr);
+      throw new Error("Both primary and fallback AI providers failed.");
     }
-    throw err;
   }
 }
 
@@ -133,7 +118,7 @@ Escalation triggers: ${escalationRules}`;
 
 export async function answerWithRag(tenantId: string, query: string): Promise<RagResult> {
   const rag = await prepareRag(tenantId, query);
-  const answer = await callGroqWithRetry(
+  const answer = await callProviderWithFallback(
     [
       { role: "system", content: rag.system },
       { role: "user", content: query },
@@ -149,7 +134,7 @@ export async function streamAnswerWithRag(
   onToken: (token: string) => void,
 ): Promise<RagResult> {
   const rag = await prepareRag(tenantId, query);
-  const stream = await callGroqWithRetry(
+  const stream = await callProviderWithFallback(
     [
       { role: "system", content: rag.system },
       { role: "user", content: query },

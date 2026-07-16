@@ -1,7 +1,7 @@
 import mongoose, { Schema, model, type Model } from "mongoose";
 
 const tenantSettings = new Schema({ widgetColor: { type: String, default: "#2563eb" }, widgetPosition: { type: String, default: "bottom-right" } }, { _id: false });
-const TenantSchema = new Schema({ name: { type: String, required: true }, slug: { type: String, required: true, unique: true, lowercase: true }, email: String, plan: { type: String, enum: ["free", "pro", "enterprise"], default: "free" }, settings: { type: tenantSettings, default: () => ({}) } }, { timestamps: true });
+const TenantSchema = new Schema({ name: { type: String, required: true }, slug: { type: String, required: true, unique: true, lowercase: true }, email: String, plan: { type: String, enum: ["free", "pro", "enterprise"], default: "free" }, isActive: { type: Boolean, default: true }, razorpaySubscriptionId: String, settings: { type: tenantSettings, default: () => ({}) } }, { timestamps: true });
 
 const UserSchema = new Schema({ tenantId: { type: Schema.Types.ObjectId, ref: "Tenant", required: true, index: true }, name: { type: String, required: true }, email: { type: String, required: true, lowercase: true }, passwordHash: { type: String, required: true }, role: { type: String, enum: ["superadmin", "admin", "agent"], default: "agent" }, isVerified: { type: Boolean, default: false }, resetToken: String, resetTokenExpiry: Date }, { timestamps: true });
 UserSchema.index({ tenantId: 1, email: 1 }, { unique: true });

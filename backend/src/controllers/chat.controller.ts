@@ -30,9 +30,22 @@ export async function sendMessage(req: Request, res: Response) {
   if (customerName) conversation.customerName = customerName;
   if (customerEmail) conversation.customerEmail = customerEmail;
   await Message.create({ tenantId, conversationId: conversation._id, role: "user", content: message });
-  const result = await answerWithRag(tenantId, message);
-  const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
-  res.json({ message: assistant, ticket, escalated: Boolean(ticket) });
+  
+  try {
+    const result = await answerWithRag(tenantId, message);
+    const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
+    res.json({ message: assistant, ticket, escalated: Boolean(ticket) });
+  } catch (error) {
+    console.error("[chat] AI generation failed completely:", error);
+    const fallbackMessage = "We're having trouble right now, an agent will follow up shortly.";
+    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [] };
+    const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
+    // Explicitly create a high priority ticket since the system failed
+    if (!ticket) {
+      await createTicket(tenantId, conversation, "SYSTEM ERROR: " + message, "high");
+    }
+    res.json({ message: assistant, ticket: true, escalated: true });
+  }
 }
 
 export async function streamMessage(req: Request, res: Response) {
@@ -44,9 +57,22 @@ export async function streamMessage(req: Request, res: Response) {
   if (customerEmail) conversation.customerEmail = customerEmail;
   await Message.create({ tenantId, conversationId: conversation._id, role: "user", content: message });
   res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" });
-  const result = await streamAnswerWithRag(tenantId, message, (token) => res.write(`event: token\ndata: ${JSON.stringify({ token })}\n\n`));
-  const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
-  res.write(`event: done\ndata: ${JSON.stringify({ message: assistant, ticket, escalated: Boolean(ticket) })}\n\n`);
+  
+  try {
+    const result = await streamAnswerWithRag(tenantId, message, (token) => res.write(`event: token\ndata: ${JSON.stringify({ token })}\n\n`));
+    const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
+    res.write(`event: done\ndata: ${JSON.stringify({ message: assistant, ticket, escalated: Boolean(ticket) })}\n\n`);
+  } catch (error) {
+    console.error("[chat] AI generation failed completely during stream:", error);
+    const fallbackMessage = "We're having trouble right now, an agent will follow up shortly.";
+    res.write(`event: token\ndata: ${JSON.stringify({ token: fallbackMessage })}\n\n`);
+    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [] };
+    const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
+    if (!ticket) {
+      await createTicket(tenantId, conversation, "SYSTEM ERROR: " + message, "high");
+    }
+    res.write(`event: done\ndata: ${JSON.stringify({ message: assistant, ticket: true, escalated: true })}\n\n`);
+  }
   res.end();
 }
 
