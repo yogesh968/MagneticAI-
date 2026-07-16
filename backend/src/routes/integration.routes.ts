@@ -4,7 +4,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { rbacCheck, validate, verifyJWT } from "../middleware/index.js";
 import { verifyEmailWebhook, verifyTwilioWebhook } from "../middleware/webhook.js";
-import { Conversation, Message, Tenant } from "../models/index.js";
+import { Bot, Conversation, Message, Tenant } from "../models/index.js";
 import { createTicket } from "../services/escalation.service.js";
 import { answerWithRag } from "../services/rag.service.js";
 import { env } from "../config/env.js";
@@ -81,6 +81,13 @@ const whatsappHandler = async (req: any, res: any) => {
       return res.status(200).send("<Response></Response>");
     }
 
+    // WhatsApp carries no bot selector, so it always uses the tenant's default bot.
+    const bot = await Bot.findOne({ tenantId, isDefault: true, isActive: true }).select("_id").lean<any>();
+    if (!bot) {
+      console.warn("[whatsapp] tenant has no active default bot — rejecting");
+      return res.status(200).send("<Response></Response>");
+    }
+
     const phone = from.replace("whatsapp:", "");
 
     // Find or create conversation for this phone number
@@ -94,6 +101,7 @@ const whatsappHandler = async (req: any, res: any) => {
     if (!conversation) {
       conversation = await Conversation.create({
         tenantId,
+        botId:          bot._id,
         sessionId:      crypto.randomUUID(),
         customerName:   phone,
         customerEmail:  `whatsapp:${phone}`,
@@ -112,8 +120,8 @@ const whatsappHandler = async (req: any, res: any) => {
     conversation.messageCount += 1;
     await conversation.save();
 
-    // Get AI answer
-    const result = await answerWithRag(tenantId, msgBody);
+    // Get AI answer from the default bot's knowledge base
+    const result = await answerWithRag({ tenantId, botId: String(bot._id) }, msgBody);
 
     // Persist assistant reply
     await Message.create({

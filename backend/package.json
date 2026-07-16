@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/seed.ts",
+    "migrate:multi-bot": "tsx src/scripts/migrate-multi-bot.ts",
     "lint": "eslint src --ext .ts",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest --forceExit",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest tests/unit --forceExit",

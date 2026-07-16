@@ -4,7 +4,7 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { connectDB } from "./config/db.js";
-import { BotConfig, Conversation, Document, Message, Tenant, Ticket, User } from "./models/index.js";
+import { Bot, Conversation, Document, Message, Tenant, Ticket, User } from "./models/index.js";
 import { processDocument } from "./services/document.service.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -50,63 +50,67 @@ if (!agentExists) {
   });
 }
 
-// ── BotConfig ────────────────────────────────────────────────────────────────
-const configExists = await BotConfig.exists({ tenantId: tenant._id });
-if (!configExists) {
-  await BotConfig.create({
-    tenantId: tenant._id,
-    botName: "AcmeBot",
-    welcomeMessage: "Hi! I'm AcmeBot, your AI support assistant. How can I help you today?",
-    personality: "friendly",
-    isActive: true,
-    settings: { widgetColor: "#2563eb", widgetPosition: "bottom-right" },
-    escalationRules: [
-      { trigger: "refund", priority: "high" },
-      { trigger: "legal", priority: "urgent" },
-      { trigger: "lawsuit", priority: "urgent" },
-      { trigger: "payment failed", priority: "high" },
-      { trigger: "angry", priority: "medium" },
-    ],
-    suggestedQuestions: [
-      "What is your refund policy?",
-      "When will my order ship?",
-      "How do I track my order?",
-      "What payment methods do you accept?",
-      "How do I contact support?",
-    ],
-  });
-} else {
-  await BotConfig.updateOne(
-    { tenantId: tenant._id },
-    {
-      $set: {
-        escalationRules: [
-          { trigger: "refund", priority: "high" },
-          { trigger: "legal", priority: "urgent" },
-          { trigger: "lawsuit", priority: "urgent" },
-          { trigger: "payment failed", priority: "high" },
-          { trigger: "angry", priority: "medium" },
-        ],
-        suggestedQuestions: [
-          "What is your refund policy?",
-          "When will my order ship?",
-          "How do I track my order?",
-          "What payment methods do you accept?",
-          "How do I contact support?",
-        ],
-      },
+// ── Bots ─────────────────────────────────────────────────────────────────────
+// Two bots on purpose: each gets its own documents below, which is what makes
+// the per-bot knowledge base visible in the dashboard.
+const supportBot = await Bot.findOneAndUpdate(
+  { tenantId: tenant._id, botName: "AcmeBot" },
+  {
+    $set: {
+      description: "General customer support — refunds, shipping, orders.",
+      welcomeMessage: "Hi! I'm AcmeBot, your AI support assistant. How can I help you today?",
+      personality: "friendly",
+      isActive: true,
+      isDefault: true,
+      settings: { widgetColor: "#2563eb", widgetPosition: "bottom-right" },
+      escalationRules: [
+        { trigger: "refund", priority: "high" },
+        { trigger: "legal", priority: "urgent" },
+        { trigger: "lawsuit", priority: "urgent" },
+        { trigger: "payment failed", priority: "high" },
+        { trigger: "angry", priority: "medium" },
+      ],
+      suggestedQuestions: [
+        "What is your refund policy?",
+        "When will my order ship?",
+        "How do I track my order?",
+        "What payment methods do you accept?",
+        "How do I contact support?",
+      ],
     },
-  );
-}
+  },
+  { new: true, upsert: true },
+);
+
+const productBot = await Bot.findOneAndUpdate(
+  { tenantId: tenant._id, botName: "Product Expert" },
+  {
+    $set: {
+      description: "Answers product and feature questions only.",
+      welcomeMessage: "Hi! Ask me anything about our products and features.",
+      personality: "technical",
+      isActive: true,
+      settings: { widgetColor: "#7c3aed", widgetPosition: "bottom-right" },
+      escalationRules: [{ trigger: "speak to human", priority: "medium" }],
+      suggestedQuestions: [
+        "What features are included?",
+        "How do I get started?",
+        "Is there an API?",
+      ],
+    },
+  },
+  { new: true, upsert: true },
+);
 
 // ── Knowledge Base documents ─────────────────────────────────────────────────
 const docCount = await Document.countDocuments({ tenantId: tenant._id });
 if (docCount === 0) {
   await mkdir(UPLOAD_DIR, { recursive: true });
+  // Split across the two bots so each has a distinct knowledge base.
   const sampleFiles = [
-    { name: "Refund Policy", file: "refund-policy.txt" },
-    { name: "Shipping FAQ", file: "shipping-faq.txt" },
-    { name: "Product Guide", file: "product-guide.txt" },
+    { name: "Refund Policy", file: "refund-policy.txt", bot: supportBot },
+    { name: "Shipping FAQ", file: "shipping-faq.txt", bot: supportBot },
+    { name: "Product Guide", file: "product-guide.txt", bot: productBot },
   ];
   for (const sample of sampleFiles) {
     const srcPath = resolve(__dirname, "../../sample-kb", sample.file);
@@ -114,6 +118,7 @@ if (docCount === 0) {
     await copyFile(srcPath, destPath).catch(() => {});
     const doc = await Document.create({
       tenantId: tenant._id,
+      botId: sample.bot._id,
       name: `${sample.name}.txt`,
       type: "txt",
       originalUrl: destPath,
@@ -122,8 +127,14 @@ if (docCount === 0) {
       metadata: { size: 1024 },
     });
     try {
-      await processDocument(String(doc._id), String(tenant._id), destPath, "txt");
-      console.info(`[seed] indexed: ${sample.name}`);
+      await processDocument({
+        documentId: String(doc._id),
+        tenantId: String(tenant._id),
+        botId: String(sample.bot._id),
+        path: destPath,
+        type: "txt",
+      });
+      console.info(`[seed] indexed: ${sample.name} -> ${sample.bot.botName}`);
     } catch (err) {
       console.warn(`[seed] could not index ${sample.name}:`, (err as Error).message);
     }
@@ -170,6 +181,7 @@ if (convCount === 0) {
     const isEscalated = i < 5;
     const conversation = await Conversation.create({
       tenantId: tenant._id,
+      botId: supportBot._id,
       sessionId: crypto.randomUUID(),
       customerName: `Customer ${i + 1}`,
       customerEmail: `customer${i + 1}@example.com`,
@@ -224,4 +236,6 @@ if (convCount === 0) {
 console.info(`Seed complete — tenant: ${tenant._id}`);
 console.info(`   Admin: admin@demo.com / Demo@1234`);
 console.info(`   Agent: agent@demo.com / Demo@1234`);
+console.info(`   Bots:  ${supportBot.botName} (default, id ${supportBot._id})`);
+console.info(`          ${productBot.botName} (id ${productBot._id})`);
 process.exit(0);

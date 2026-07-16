@@ -30,11 +30,16 @@ const sessionRateLimiter = rateLimit({
   message: { message: "Too many chat sessions started. Please try again later." },
 });
 
-chatRouter.post("/session",
-  sessionRateLimiter,
-  validate(z.object({ tenantId: z.string().min(1), customerName: z.string().optional(), customerEmail: z.string().email().optional() })),
-  createSession
-);
+// Either identifier is accepted: botId targets a specific bot, tenantId alone
+// resolves to that tenant's default bot (what legacy data-tenant-id embeds send).
+const sessionSchema = z.object({
+  botId: z.string().min(1).optional(),
+  tenantId: z.string().min(1).optional(),
+  customerName: z.string().optional(),
+  customerEmail: z.string().email().optional(),
+}).refine((v) => v.botId || v.tenantId, { message: "botId or tenantId is required" });
+
+chatRouter.post("/session", sessionRateLimiter, validate(sessionSchema), createSession);
 
 // tenantId and sessionId now come from the x-session-token header, not the body.
 const messageSchema = z.object({ message: z.string().min(1).max(5000), customerName: z.string().optional(), customerEmail: z.string().email().optional() });

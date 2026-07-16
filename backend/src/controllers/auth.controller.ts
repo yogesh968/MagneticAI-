@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { BotConfig, Tenant, User } from "../models/index.js";
+import { Bot, Tenant, User } from "../models/index.js";
 import { signAccessToken, signRefreshToken, signSocketTicket, verifyRefreshToken } from "../utils/jwt.js";
 import { REFRESH_COOKIE, clearAuthCookies, setAuthCookies, setSessionHint } from "../utils/cookies.js";
 
@@ -30,8 +30,13 @@ export async function register(req: Request, res: Response) {
   const slug = `${businessName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${crypto.randomBytes(3).toString("hex")}`;
   const tenant = await Tenant.create({ name: businessName, slug, email });
   const user = await User.create({ tenantId: tenant._id, name, email: email.toLowerCase(), passwordHash: await bcrypt.hash(password, 12), role: "admin", isVerified: true });
-  await BotConfig.create({
+  // Every tenant starts with one default bot so the widget and KB upload have a
+  // target from the first minute.
+  await Bot.create({
     tenantId: tenant._id,
+    botName: "Support Assistant",
+    description: "Your first bot. Rename it and give it a knowledge base.",
+    isDefault: true,
     settings: { widgetColor: "#2563eb", widgetPosition: "bottom-right" },
   });
   res.status(201).json({ user: { id: user._id, name, email: user.email, tenantId: tenant._id, role: user.role }, ...issue(res, user) });

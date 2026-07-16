@@ -1,10 +1,13 @@
-import { BotConfig, Tenant } from "../models/index.js";
+import { Bot, Tenant } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { embedQuery } from "./embedding.service.js";
 import { GroqProvider } from "./ai/groq.provider.js";
 import { FallbackProvider } from "./ai/fallback.provider.js";
 import { ChatMessage } from "./ai/ai-provider.interface.js";
 export type RagResult = { answer: string; hasContext: boolean; documentsReferenced: string[] };
+
+/** Identifies which bot is answering, and therefore which slice of the KB to search. */
+export type RagTarget = { tenantId: string; botId: string };
 
 const primaryProvider = new GroqProvider();
 const fallbackProvider = new FallbackProvider();
@@ -40,18 +43,18 @@ async function callProviderWithFallback(
   }
 }
 
-async function getPersona(tenantId: string) {
+async function getPersona({ tenantId, botId }: RagTarget) {
   const [config, tenant] = await Promise.all([
-    BotConfig.findOne({ tenantId }).lean<any>(),
+    Bot.findOne({ _id: botId, tenantId }).lean<any>(),
     Tenant.findById(tenantId).lean<any>(),
   ]);
   return { config, tenant };
 }
 
-async function prepareRag(tenantId: string, query: string) {
+async function prepareRag(target: RagTarget, query: string) {
   const [vector, { config, tenant }] = await Promise.all([
     embedQuery(query),
-    getPersona(tenantId),
+    getPersona(target),
   ]);
   const botName = config?.botName ?? "Support Assistant";
   const personality = config?.personality ?? "professional";
@@ -69,14 +72,17 @@ Never fabricate specific business details.`;
     return { hasContext: false, documentsReferenced: [] as string[], system: generalSystem };
   }
 
-  // Search KB
+  // Search this bot's slice of the tenant's KB. The collection is per-tenant, so
+  // the botId filter is what keeps one bot from answering out of another's
+  // documents — without it every bot in a tenant shares a single knowledge pool.
   let hits: Awaited<ReturnType<typeof qdrant.search>> = [];
   try {
-    hits = await qdrant.search(collectionName(tenantId), {
+    hits = await qdrant.search(collectionName(target.tenantId), {
       vector,
       limit: 5,
       score_threshold: 0.25,
       with_payload: true,
+      filter: { must: [{ key: "botId", match: { value: target.botId } }] },
     });
   } catch {
     hits = [];
@@ -116,8 +122,8 @@ Escalation triggers: ${escalationRules}`;
   return { hasContext: true, documentsReferenced, system };
 }
 
-export async function answerWithRag(tenantId: string, query: string): Promise<RagResult> {
-  const rag = await prepareRag(tenantId, query);
+export async function answerWithRag(target: RagTarget, query: string): Promise<RagResult> {
+  const rag = await prepareRag(target, query);
   const answer = await callProviderWithFallback(
     [
       { role: "system", content: rag.system },
@@ -129,11 +135,11 @@ export async function answerWithRag(tenantId: string, query: string): Promise<Ra
 }
 
 export async function streamAnswerWithRag(
-  tenantId: string,
+  target: RagTarget,
   query: string,
   onToken: (token: string) => void,
 ): Promise<RagResult> {
-  const rag = await prepareRag(tenantId, query);
+  const rag = await prepareRag(target, query);
   const stream = await callProviderWithFallback(
     [
       { role: "system", content: rag.system },

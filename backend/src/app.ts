@@ -12,8 +12,8 @@ import { dashboardCors, publicCors } from "./config/cors.js";
 import { errorHandler } from "./middleware/index.js";
 import { analyticsRouter } from "./routes/analytics.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
+import { botRouter, widgetRouter } from "./routes/bot.routes.js";
 import { chatRouter } from "./routes/chat.routes.js";
-import { configRouter, widgetRouter } from "./routes/config.routes.js";
 import { conversationRouter } from "./routes/conversation.routes.js";
 import { integrationRouter } from "./routes/integration.routes.js";
 import { kbRouter } from "./routes/kb.routes.js";
@@ -74,7 +74,7 @@ app.use("/api/kb", dashboardCors, kbRouter);
 app.use("/api/tickets", dashboardCors, ticketRouter);
 app.use("/api/conversations", dashboardCors, conversationRouter);
 app.use("/api/analytics", dashboardCors, analyticsRouter);
-app.use("/api/config", dashboardCors, configRouter);
+app.use("/api/bots", dashboardCors, botRouter);
 app.use(errorHandler);
 
 let initPromise: Promise<void> | undefined;

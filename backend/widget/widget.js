@@ -2,11 +2,17 @@
   "use strict";
 
   const script = document.currentScript;
+  // data-bot-id picks a specific bot. data-tenant-id is the older form and
+  // resolves to that tenant's default bot.
+  const botId = script && script.dataset.botId;
   const tenantId = script && script.dataset.tenantId;
-  if (!tenantId) return console.error("[MagneticAI] data-tenant-id is required");
+  if (!botId && !tenantId) {
+    return console.error("[MagneticAI] data-bot-id is required");
+  }
 
   const API = new URL(script.src).origin;
   const SOCKET_URL = script.dataset.socketUrl || API;
+  const CONFIG_URL = botId ? `${API}/api/widget/bot/${botId}/config` : `${API}/api/widget/${tenantId}/config`;
 
   // ── Shadow DOM container ────────────────────────────────────────────────
   const host = document.createElement("div");
@@ -15,7 +21,8 @@
   const root = host.attachShadow({ mode: "open" });
 
   // ── State ───────────────────────────────────────────────────────────────
-  const STORAGE_KEY = `magnetic_session_${tenantId}`;
+  // Keyed per bot so two widgets on one page don't share a conversation.
+  const STORAGE_KEY = `magnetic_session_${botId || tenantId}`;
   let config = null;
   let sessionId = sessionStorage.getItem(STORAGE_KEY + "_sid") || null;
   let conversationId = sessionStorage.getItem(STORAGE_KEY + "_cid") || null;
@@ -39,11 +46,13 @@
   }
 
   async function startSession() {
+    // The server pins the session to a bot; botId wins, tenantId falls back to
+    // the tenant's default bot.
     const res = await fetch(`${API}/api/chat/session`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       mode: "cors",
-      body: JSON.stringify({ tenantId }),
+      body: JSON.stringify(botId ? { botId } : { tenantId }),
     });
     if (!res.ok) throw new Error(`Session error: ${res.status}`);
     const data = await res.json();
@@ -257,8 +266,11 @@
   }
 
   // ── Build UI ─────────────────────────────────────────────────────────────
-  fetch(`${API}/api/widget/${tenantId}/config`, { mode: "cors" })
-    .then((r) => r.json())
+  fetch(CONFIG_URL, { mode: "cors" })
+    .then((r) => {
+      if (!r.ok) throw new Error(`Config ${r.status} — check the bot id is correct and the bot is active`);
+      return r.json();
+    })
     .then(async (cfg) => {
       config = cfg;
       const color = cfg.settings?.widgetColor || "#2563eb";

@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useForm, useFieldArray } from "react-hook-form";
 import { api } from "@/lib/api";
-import { Loading, PageHeader, Spinner, Tabs } from "@/components/ui";
+import { useBots } from "@/lib/bots";
+import { BotSelector } from "@/components/BotSelector";
+import { Empty, Loading, PageHeader, Spinner, Tabs } from "@/components/ui";
 import toast from "react-hot-toast";
 import {
   Bot, Send, Plus, Trash2, Zap, MessageSquare,
-  Settings2, Sparkles, ShieldCheck,
+  Settings2, Sparkles, ShieldCheck, BookOpen,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -25,7 +28,8 @@ const PERSONALITY_OPTS = [
   { value: "technical",    label: "Technical",    desc: "Detailed, accurate, and technical" },
 ];
 
-export default function AiConfigPage() {
+function AiConfigClient() {
+  const { bots, selected, selectBot, reload: reloadBots, loading: botsLoading } = useBots();
   const [loading, setLoading] = useState(true);
   const [testQ, setTestQ] = useState("");
   const [testAnswer, setTestAnswer] = useState("");
@@ -43,8 +47,14 @@ export default function AiConfigPage() {
   const personality = watch("personality");
   const isActive    = watch("isActive");
 
+  const botId = selected?._id;
+
+  // Reload the form whenever the selected bot changes — each bot has its own persona.
   useEffect(() => {
-    api.get("/config/bot").then((r) => {
+    if (!botId) return;
+    setLoading(true);
+    setTestAnswer("");
+    api.get(`/bots/${botId}`).then((r) => {
       const d = r.data;
       reset({
         botName: d.botName,
@@ -55,43 +65,75 @@ export default function AiConfigPage() {
         suggestedQuestions: (d.suggestedQuestions ?? []).map((q: string) => ({ value: q })),
       });
       setLoading(false);
+    }).catch(() => {
+      toast.error("Could not load this bot");
+      setLoading(false);
     });
-  }, [reset]);
+  }, [botId, reset]);
 
   const save = async (values: FormValues) => {
+    if (!botId) return;
     try {
-      await api.put("/config/bot", {
+      await api.put(`/bots/${botId}`, {
         ...values,
         suggestedQuestions: values.suggestedQuestions.map((q) => q.value).filter(Boolean),
       });
-      toast.success("Configuration saved successfully");
+      toast.success(`${values.botName} saved`);
       reset(values);
+      void reloadBots();
     } catch (e: any) {
       toast.error(e.response?.data?.message ?? "Save failed");
     }
   };
 
   const runTest = async () => {
-    if (!testQ.trim()) return;
+    if (!testQ.trim() || !botId) return;
     setTesting(true);
     setTestAnswer("");
     try {
-      const { data } = await api.post("/config/test", { question: testQ });
+      const { data } = await api.post(`/bots/${botId}/test`, { question: testQ });
       setTestAnswer(data.answer ?? JSON.stringify(data, null, 2));
     } catch (e: any) {
       toast.error(e.response?.data?.message ?? "Test failed");
     } finally { setTesting(false); }
   };
 
-  if (loading) return <div className="p-8"><Loading rows={7} /></div>;
+  if (botsLoading) return <div className="p-8"><Loading rows={7} /></div>;
+
+  if (!bots?.length || !selected) {
+    return (
+      <div className="p-7 max-w-3xl mx-auto">
+        <PageHeader title="AI Configuration" subtitle="Configure each bot's identity and behaviour" />
+        <div className="rounded-2xl border border-slate-200/60 bg-white">
+          <Empty
+            title="No bots yet"
+            text="Create a bot before configuring one."
+            icon={<Bot size={28} />}
+            action={<Link href="/dashboard/bots" className="btn-primary gap-2"><Plus size={14} /> Create a bot</Link>}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-7 max-w-3xl mx-auto">
       <PageHeader
         title="AI Configuration"
-        subtitle="Configure your support bot's identity, behaviour, and escalation rules"
+        subtitle="Each bot has its own identity, behaviour, and escalation rules"
       />
 
+      {/* Bot scope bar — z-20 so the selector's dropdown paints above the form below. */}
+      <div className="card anim-up relative z-20 mb-5 flex flex-wrap items-end justify-between gap-4">
+        <BotSelector bots={bots} selected={selected} onSelect={selectBot} label="Configuring" />
+        <Link href={`/dashboard/knowledge-base?bot=${selected._id}`} className="btn-secondary btn-sm gap-1.5">
+          <BookOpen size={12} />
+          {selected.documentCount ?? 0} document{(selected.documentCount ?? 0) === 1 ? "" : "s"}
+        </Link>
+      </div>
+
+      {loading ? <Loading rows={7} /> : (
+        <>
       <Tabs
         active={tab}
         onChange={setTab}
@@ -337,6 +379,17 @@ export default function AiConfigPage() {
           )}
         </div>
       )}
+        </>
+      )}
     </div>
+  );
+}
+
+export default function AiConfigPage() {
+  // useBots reads ?bot= via useSearchParams, which needs a Suspense boundary.
+  return (
+    <Suspense fallback={<div className="p-8"><Loading rows={7} /></div>}>
+      <AiConfigClient />
+    </Suspense>
   );
 }

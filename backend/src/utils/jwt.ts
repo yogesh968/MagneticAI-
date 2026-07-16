@@ -17,6 +17,8 @@ export type TokenPayload = {
 export type SessionPayload = {
   sessionId: string;
   tenantId: string;
+  /** Which bot answers this conversation — fixed for the session's lifetime. */
+  botId: string;
   conversationId: string;
 };
 

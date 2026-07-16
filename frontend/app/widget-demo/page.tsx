@@ -17,6 +17,8 @@ export default function WidgetDemoPage() {
     if (hint?.tenantId) setTenantId(hint.tenantId);
   }, []);
 
+  // Demo intentionally embeds by tenant, which loads that tenant's DEFAULT bot.
+  // The dashboard's Widget page hands out per-bot data-bot-id snippets.
   useEffect(() => {
     if (!tenantId) return;
     const existing = document.getElementById("magnetic-widget-demo");
@@ -29,7 +31,7 @@ export default function WidgetDemoPage() {
     return () => { script.remove(); };
   }, [tenantId]);
 
-  const snippet = `<script\n  src="${API_URL}/widget.js"\n  data-tenant-id="${tenantId || "YOUR_TENANT_ID"}">\n</script>`;
+  const snippet = `<script\n  src="${API_URL}/widget.js"\n  data-bot-id="YOUR_BOT_ID">\n</script>`;
 
   const copy = () => {
     navigator.clipboard.writeText(snippet);
@@ -106,10 +108,10 @@ export default function WidgetDemoPage() {
           <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">How to embed</p>
           <ol className="space-y-3 text-sm text-slate-400">
             {[
-              "Run `npm run seed` to create the demo tenant and knowledge base",
-              "Copy the embed code above and paste it before </body> on your website",
-              "Replace YOUR_TENANT_ID with your actual tenant ID from the dashboard",
-              "The widget will auto-load your bot settings and knowledge base",
+              "Run `npm run seed` to create the demo tenant, bots, and knowledge base",
+              "Open Dashboard → Bots and copy a bot's embed code",
+              "Paste it before </body> on your website",
+              "Each bot answers only from the documents you gave that bot",
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-600/30 text-[10px] font-bold text-blue-400 mt-0.5">{i + 1}</span>

@@ -16,6 +16,7 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   "/dashboard/conversations": MessageSquare,
   "/dashboard/tickets": TicketCheck,
   "/dashboard/escalations": AlertTriangle,
+  "/dashboard/bots": Bot,
   "/dashboard/knowledge-base": BookOpen,
   "/dashboard/analytics": BarChart3,
   "/dashboard/ai-config": Bot,
@@ -27,7 +28,8 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
 const GROUPS = [
   { label: "Overview",  hrefs: ["/dashboard"] },
   { label: "Support",   hrefs: ["/dashboard/conversations", "/dashboard/tickets", "/dashboard/escalations"] },
-  { label: "Platform",  hrefs: ["/dashboard/knowledge-base", "/dashboard/analytics", "/dashboard/ai-config"] },
+  { label: "AI",        hrefs: ["/dashboard/bots", "/dashboard/knowledge-base", "/dashboard/ai-config"] },
+  { label: "Platform",  hrefs: ["/dashboard/analytics"] },
   { label: "Manage",    hrefs: ["/dashboard/team", "/dashboard/widget", "/dashboard/integrations"] },
 ];
 

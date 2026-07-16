@@ -6,3 +6,5 @@ dist
 uploads
 qdrant_storage
 *.log
+tsconfig.tsbuildinfo
+*.tsbuildinfo

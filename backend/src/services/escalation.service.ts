@@ -1,4 +1,4 @@
-import { BotConfig, Conversation, Message, Ticket } from "../models/index.js";
+import { Bot, Conversation, Message, Ticket } from "../models/index.js";
 
 const defaults = ["refund", "lawsuit", "legal", "angry", "furious", "cancel account", "payment failed", "outage", "speak to human", "manager", "unacceptable"];
 export type Priority = "low" | "medium" | "high" | "urgent";
@@ -23,7 +23,14 @@ export async function createTicket(tenantId: string, conversation: any, descript
   return ticket;
 }
 
-export async function evaluateEscalation(tenantId: string, text: string) {
-  const config = await BotConfig.findOne({ tenantId }).lean<any>();
-  return detectEscalation(text, config?.escalationRules ?? []);
+/**
+ * Escalation rules belong to the bot, not the tenant — two bots in one tenant
+ * can reasonably escalate on different phrases. Falls back to the tenant's
+ * default bot for callers with no bot in hand (email/WhatsApp integrations).
+ */
+export async function evaluateEscalation(tenantId: string, text: string, botId?: string) {
+  const bot = botId
+    ? await Bot.findOne({ _id: botId, tenantId }).select("escalationRules").lean<any>()
+    : await Bot.findOne({ tenantId, isDefault: true }).select("escalationRules").lean<any>();
+  return detectEscalation(text, bot?.escalationRules ?? []);
 }

@@ -21,6 +21,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { href: "/dashboard/conversations", label: "Conversations", roles: ["admin", "agent", "superadmin"] },
   { href: "/dashboard/tickets", label: "Tickets", roles: ["admin", "agent", "superadmin"] },
   { href: "/dashboard/escalations", label: "Escalations", badge: true, roles: ["admin", "agent", "superadmin"] },
+  { href: "/dashboard/bots", label: "Bots", roles: ["admin", "superadmin"] },
   { href: "/dashboard/knowledge-base", label: "Knowledge Base", roles: ["admin", "superadmin"] },
   { href: "/dashboard/analytics", label: "Analytics", roles: ["admin", "superadmin"] },
   { href: "/dashboard/ai-config", label: "AI Config", roles: ["admin", "superadmin"] },
