@@ -24,17 +24,20 @@ export default function AdminLoginPage() {
   const submit = async (values: any) => {
     try {
       const { data } = await api.post("/auth/login", values);
-      if (!data.accessToken) { toast.error("Login failed"); return; }
-      const role = data.user?.role;
+      if (!data.user) { toast.error("Login failed"); return; }
+      const role = data.user.role;
+      // The credentials were valid and the server has already issued the session
+      // cookie, so this is not a denial — it is just the wrong door. Send them to
+      // the dashboard rather than claiming access was refused.
       if (role !== "superadmin") {
-        toast.error("Access denied. This portal is for superadmins only.");
+        toast("Signed in — this portal is superadmin-only, taking you to your dashboard.");
+        router.replace("/dashboard");
+        router.refresh();
         return;
       }
-      localStorage.setItem("accessToken", data.accessToken);
-      localStorage.setItem("refreshToken", data.refreshToken);
-      if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
-      toast.success(`Welcome, ${data.user?.name ?? "Admin"}!`);
-      router.push(role === "superadmin" ? "/admin" : "/dashboard");
+      toast.success(`Welcome, ${data.user.name ?? "Admin"}!`);
+      router.replace("/admin");
+      router.refresh();
     } catch (e: any) {
       toast.error(e.response?.data?.message ?? "Invalid credentials");
     }

@@ -3,12 +3,32 @@ import crypto from "node:crypto";
 import { Conversation, Message, Tenant } from "../models/index.js";
 import { answerWithRag, streamAnswerWithRag } from "../services/rag.service.js";
 import { createTicket, evaluateEscalation } from "../services/escalation.service.js";
+import { signSessionToken } from "../utils/jwt.js";
 
+/**
+ * The only public chat route that accepts a caller-supplied tenantId. It mints a
+ * signed session token; every subsequent route reads the tenant from that token
+ * instead, so a caller can no longer point itself at an arbitrary tenant.
+ */
 export async function createSession(req: Request, res: Response) {
-  if (!await Tenant.exists({ _id: req.body.tenantId })) return res.status(404).json({ message: "Tenant not found" });
+  const tenant = await Tenant.findOne({ _id: req.body.tenantId, isActive: true }).select("_id").lean<any>();
+  if (!tenant) return res.status(404).json({ message: "Tenant not found" });
+
   const sessionId = crypto.randomUUID();
-  const conversation = await Conversation.create({ tenantId: req.body.tenantId, sessionId, customerName: req.body.customerName, customerEmail: req.body.customerEmail });
-  res.status(201).json({ sessionId, conversationId: String(conversation._id) });
+  const conversation = await Conversation.create({
+    tenantId: tenant._id,
+    sessionId,
+    customerName: req.body.customerName,
+    customerEmail: req.body.customerEmail,
+  });
+
+  const sessionToken = signSessionToken({
+    sessionId,
+    tenantId: String(tenant._id),
+    conversationId: String(conversation._id),
+  });
+
+  res.status(201).json({ sessionId, conversationId: String(conversation._id), sessionToken });
 }
 
 async function persistReply(tenantId: string, conversation: any, userMessage: string, result: Awaited<ReturnType<typeof answerWithRag>>, started: number) {
@@ -22,15 +42,22 @@ async function persistReply(tenantId: string, conversation: any, userMessage: st
   return { assistant, ticket };
 }
 
+/** Loads the conversation named by the session token, scoped to that token's tenant. */
+async function loadSessionConversation(req: Request) {
+  const { sessionId, tenantId } = req.session!;
+  const conversation = await Conversation.findOne({ sessionId, tenantId, deletedAt: { $exists: false } });
+  return { conversation, tenantId };
+}
+
 export async function sendMessage(req: Request, res: Response) {
   const started = Date.now();
-  const { sessionId, tenantId, message, customerName, customerEmail } = req.body;
-  const conversation = await Conversation.findOne({ sessionId, tenantId, deletedAt: { $exists: false } });
+  const { message, customerName, customerEmail } = req.body;
+  const { conversation, tenantId } = await loadSessionConversation(req);
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
   if (customerName) conversation.customerName = customerName;
   if (customerEmail) conversation.customerEmail = customerEmail;
   await Message.create({ tenantId, conversationId: conversation._id, role: "user", content: message });
-  
+
   try {
     const result = await answerWithRag(tenantId, message);
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
@@ -50,14 +77,14 @@ export async function sendMessage(req: Request, res: Response) {
 
 export async function streamMessage(req: Request, res: Response) {
   const started = Date.now();
-  const { sessionId, tenantId, message, customerName, customerEmail } = req.body;
-  const conversation = await Conversation.findOne({ sessionId, tenantId, deletedAt: { $exists: false } });
+  const { message, customerName, customerEmail } = req.body;
+  const { conversation, tenantId } = await loadSessionConversation(req);
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
   if (customerName) conversation.customerName = customerName;
   if (customerEmail) conversation.customerEmail = customerEmail;
   await Message.create({ tenantId, conversationId: conversation._id, role: "user", content: message });
   res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" });
-  
+
   try {
     const result = await streamAnswerWithRag(tenantId, message, (token) => res.write(`event: token\ndata: ${JSON.stringify({ token })}\n\n`));
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
@@ -77,17 +104,22 @@ export async function streamMessage(req: Request, res: Response) {
 }
 
 export async function createPublicTicket(req: Request, res: Response) {
-  const conversation = await Conversation.findOne({ sessionId: req.body.sessionId, tenantId: req.body.tenantId, deletedAt: { $exists: false } });
+  const { conversation, tenantId } = await loadSessionConversation(req);
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
   conversation.customerName = req.body.customerName;
   conversation.customerEmail = req.body.customerEmail;
   await conversation.save();
-  const ticket = await createTicket(req.body.tenantId, conversation, req.body.description, req.body.priority ?? "low");
+  const ticket = await createTicket(tenantId, conversation, req.body.description, req.body.priority ?? "low");
   res.status(201).json(ticket);
 }
 
+/**
+ * Reads only the conversation the session token was minted for. The sessionId is
+ * no longer taken from the URL — holding a session UUID is not proof of ownership.
+ */
 export async function history(req: Request, res: Response) {
-  const conversation = await Conversation.findOne({ sessionId: req.params.sessionId, ...(req.query.tenantId ? { tenantId: req.query.tenantId } : {}) });
+  const { conversation } = await loadSessionConversation(req);
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
-  res.json({ conversation, messages: await Message.find({ conversationId: conversation._id, tenantId: conversation.tenantId }).sort({ createdAt: 1 }) });
+  const messages = await Message.find({ conversationId: conversation._id, tenantId: conversation.tenantId }).sort({ createdAt: 1 });
+  res.json({ conversation, messages });
 }

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { Badge, Empty, Loading, PageHeader } from "@/components/ui";
 import { Building2, Globe, Calendar, Hash } from "lucide-react";
 import toast from "react-hot-toast";
@@ -19,17 +19,16 @@ export default function AdminTenantsPage() {
       setUsers(agentsRes.data ?? []);
     }).catch(() => toast.error("Could not load data"));
 
-    // Build tenant info from the current user's token
-    const stored = localStorage.getItem("user");
-    if (stored) {
-      const u = JSON.parse(stored);
-      // Show the current tenant as a row
+    // FIXME: this is not a real tenant list — it fabricates a single row for the
+    // signed-in user's own tenant. A superadmin tenant-listing endpoint does not
+    // exist on the API yet, so this page cannot show the platform's tenants.
+    const hint = readSessionHint();
+    if (hint) {
       setTenants([{
-        _id: u.tenantId,
+        _id: hint.tenantId,
         name: "Current Tenant",
-        slug: u.tenantId,
-        createdAt: new Date().toISOString(),
-        email: u.email,
+        slug: hint.tenantId,
+        createdAt: null,
       }]);
     }
   }, []);

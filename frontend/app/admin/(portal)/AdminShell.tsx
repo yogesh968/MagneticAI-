@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   LayoutDashboard, Users, Building2, BarChart3,
-  ShieldCheck, LogOut, ChevronRight, Settings, Globe,
+  ShieldCheck, LogOut, ChevronRight, Settings,
 } from "lucide-react";
+import { api } from "@/lib/api";
 
 const NAV = [
   { href: "/admin",         label: "Overview",      icon: LayoutDashboard, exact: true },
@@ -15,31 +15,21 @@ const NAV = [
   { href: "/admin/system",  label: "System",         icon: Settings },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export type AdminUser = { name: string; role: string };
+
+/**
+ * Presentation only — the session is resolved server-side in layout.tsx, so
+ * unlike the previous version nothing here renders before the user is known.
+ */
+export default function AdminShell({ user, children }: { user: AdminUser; children: React.ReactNode }) {
   const pathname = usePathname();
-  const router   = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
 
-  const isLoginPage = pathname === "/admin/login";
-
-  // All hooks MUST be called unconditionally — guard logic inside effect
-  useEffect(() => {
-    if (isLoginPage) return; // skip auth check on login page itself
-    const stored = localStorage.getItem("user");
-    const token  = localStorage.getItem("accessToken");
-    if (!stored || !token) { router.replace("/admin/login"); return; }
-    const u = JSON.parse(stored);
-    if (u.role !== "superadmin") {
-      router.replace("/dashboard");
-      return;
-    }
-    setUser(u);
-  }, [router, pathname, isLoginPage]);
-
-  // Login page — render bare with no sidebar
-  if (isLoginPage) return <>{children}</>;
-
-  const logout = () => { localStorage.clear(); router.replace("/admin/login"); };
+  const logout = async () => {
+    await api.post("/auth/logout").catch(() => {});
+    router.replace("/admin/login");
+    router.refresh();
+  };
 
   const isActive = (item: typeof NAV[0]) =>
     item.exact ? pathname === item.href : pathname.startsWith(item.href);
@@ -81,34 +71,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </Link>
             );
           })}
-
-          <div className="pt-4 mt-3 border-t border-white/10">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-white/10 hover:text-white transition-all"
-            >
-              <Globe size={15} />
-              Back to Dashboard
-            </Link>
-          </div>
         </nav>
 
         {/* User footer */}
         <div className="border-t border-white/10 p-3">
-          {user && (
-            <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/10 transition-colors">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
-                {user.name?.[0]?.toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold text-white">{user.name}</p>
-                <p className="truncate text-[11px] text-slate-500 capitalize">{user.role}</p>
-              </div>
-              <button onClick={logout} title="Sign out" className="text-slate-500 hover:text-red-400 transition-colors">
-                <LogOut size={14} />
-              </button>
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/10 transition-colors">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
+              {user.name?.[0]?.toUpperCase()}
             </div>
-          )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold text-white">{user.name}</p>
+              <p className="truncate text-[11px] text-slate-500 capitalize">{user.role}</p>
+            </div>
+            <button onClick={logout} title="Sign out" className="text-slate-500 hover:text-red-400 transition-colors">
+              <LogOut size={14} />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -128,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             )}
           </nav>
           <div className="flex items-center gap-3">
-            {user && <span className="text-xs text-slate-500 font-medium">{user.name}</span>}
+            <span className="text-xs text-slate-500 font-medium">{user.name}</span>
             <span className="flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-200/60 px-3 py-1.5 text-[11px] font-bold text-violet-700 uppercase tracking-wider">
               <ShieldCheck size={11} /> Admin Portal
             </span>

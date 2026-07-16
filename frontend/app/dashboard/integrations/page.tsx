@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { PageHeader, Spinner } from "@/components/ui";
 import toast from "react-hot-toast";
 import { Mail, MessageCircle, Copy, Check, ExternalLink, CheckCircle2, XCircle, Info } from "lucide-react";
@@ -50,8 +50,7 @@ export default function IntegrationsPage() {
   const [testingSend, setTestingSend] = useState(false);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") ?? "{}");
-    setTenantId(user.tenantId ?? "");
+    setTenantId(readSessionHint()?.tenantId ?? "");
     api.get("/integrations/status")
       .then((r) => setStatus(r.data))
       .catch(() => setStatus({ email: true, whatsapp: false, twilio: false }))

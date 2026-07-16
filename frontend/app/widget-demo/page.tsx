@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Code2, Copy, Check, ExternalLink } from "lucide-react";
+import { readSessionHint } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 const DEMO_TENANT_ID = process.env.NEXT_PUBLIC_DEMO_TENANT_ID ?? "";
@@ -10,14 +11,13 @@ export default function WidgetDemoPage() {
   const [copied, setCopied] = useState(false);
   const [tenantId, setTenantId] = useState(DEMO_TENANT_ID);
 
+  // Prefer the signed-in user's tenant over the build-time demo default.
   useEffect(() => {
-    // Try to get tenantId from logged-in user
-    try {
-      const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-      if (u.tenantId) setTenantId(u.tenantId);
-    } catch {}
+    const hint = readSessionHint();
+    if (hint?.tenantId) setTenantId(hint.tenantId);
+  }, []);
 
-    // Inject widget script
+  useEffect(() => {
     if (!tenantId) return;
     const existing = document.getElementById("magnetic-widget-demo");
     if (existing) existing.remove();

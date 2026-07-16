@@ -27,14 +27,26 @@ export async function testBot(req: Request, res: Response) {
   res.json(await answerWithRag(String(req.tenantId), req.body.question));
 }
 
+/**
+ * Public — served to the widget on any customer domain. Returns an explicit
+ * whitelist rather than the whole lean document, which previously leaked
+ * escalationRules (the internal trigger phrases) to anyone who could guess a
+ * tenant ObjectId.
+ */
 export async function getWidgetConfig(req: Request, res: Response) {
   const [config, tenant] = await Promise.all([
     BotConfig.findOne({ tenantId: req.params.tenantId, isActive: true }).lean<any>(),
-    Tenant.findById(req.params.tenantId).lean<any>(),
+    Tenant.findOne({ _id: req.params.tenantId, isActive: true }).lean<any>(),
   ]);
   if (!config || !tenant) return res.status(404).json({ message: "Widget not found" });
   // Merge settings — use defaults if either is missing
   const defaultSettings = { widgetColor: "#2563eb", widgetPosition: "bottom-right" };
   const settings = { ...defaultSettings, ...(tenant.settings ?? {}), ...(config.settings ?? {}) };
-  res.json({ ...config, businessName: tenant.name, settings });
+  res.json({
+    botName: config.botName,
+    welcomeMessage: config.welcomeMessage,
+    suggestedQuestions: config.suggestedQuestions ?? [],
+    businessName: tenant.name,
+    settings,
+  });
 }

@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { UserPlus, Trash2, Shield, ShieldCheck, Eye, EyeOff } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { Avatar, Badge, Card, Empty, Loading, PageHeader, Spinner } from "@/components/ui";
 
 const ROLE_TONE: Record<string, string> = { admin: "blue", agent: "green", superadmin: "purple" };
@@ -38,10 +38,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     load();
-    try {
-      const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-      setCurrentUser(u);
-    } catch {}
+    setCurrentUser(readSessionHint());
   }, []);
 
   const invite = async (values: any) => {

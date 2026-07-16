@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { StatCard } from "@/components/ui";
 import {
   Building2, Users, MessageSquare, TicketCheck,
@@ -34,8 +34,7 @@ export default function AdminOverviewPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-    setUser(u);
+    setUser(readSessionHint());
     Promise.all([
       api.get("/analytics/overview"),
       api.get("/analytics/charts"),

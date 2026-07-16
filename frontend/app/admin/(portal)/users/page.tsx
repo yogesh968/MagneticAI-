@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { Avatar, Badge, Empty, Loading, PageHeader } from "@/components/ui";
 import { Users, Search, Shield, ShieldCheck, UserX } from "lucide-react";
 import toast from "react-hot-toast";
@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     load();
-    try { setCurrentUser(JSON.parse(localStorage.getItem("user") ?? "{}")); } catch {}
+    setCurrentUser(readSessionHint());
   }, []);
 
   const remove = async (id: string, name: string) => {

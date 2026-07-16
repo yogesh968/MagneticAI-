@@ -2,12 +2,24 @@ import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { BotConfig, Tenant, User } from "../models/index.js";
-import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import { signAccessToken, signRefreshToken, signSocketTicket, verifyRefreshToken } from "../utils/jwt.js";
+import { REFRESH_COOKIE, clearAuthCookies, setAuthCookies, setSessionHint } from "../utils/cookies.js";
 
 const tokens = (user: any) => {
-  const payload = { id: String(user._id), tenantId: String(user.tenantId), role: user.role };
+  const payload = { id: String(user._id), tenantId: String(user.tenantId), role: user.role, name: user.name, tokenVersion: user.tokenVersion ?? 0 };
   return { accessToken: signAccessToken(payload), refreshToken: signRefreshToken(payload) };
 };
+
+/**
+ * Cookies are the browser transport; the tokens stay in the body so non-browser
+ * clients and the test suite keep working against the same endpoints.
+ */
+function issue(res: Response, user: any) {
+  const { accessToken, refreshToken } = tokens(user);
+  setAuthCookies(res, accessToken, refreshToken);
+  setSessionHint(res, { role: user.role, tenantId: String(user.tenantId), name: user.name });
+  return { accessToken, refreshToken };
+}
 
 export async function register(req: Request, res: Response) {
   const { name, email, password, businessName } = req.body;
@@ -22,7 +34,7 @@ export async function register(req: Request, res: Response) {
     tenantId: tenant._id,
     settings: { widgetColor: "#2563eb", widgetPosition: "bottom-right" },
   });
-  res.status(201).json({ user: { id: user._id, name, email: user.email, tenantId: tenant._id, role: user.role }, ...tokens(user) });
+  res.status(201).json({ user: { id: user._id, name, email: user.email, tenantId: tenant._id, role: user.role }, ...issue(res, user) });
 }
 
 export async function login(req: Request, res: Response) {
@@ -30,7 +42,7 @@ export async function login(req: Request, res: Response) {
   if (!user || !(await bcrypt.compare(req.body.password, user.passwordHash))) {
     return res.status(401).json({ message: "Invalid email or password" });
   }
-  res.json({ user: { id: user._id, name: user.name, email: user.email, tenantId: user.tenantId, role: user.role }, ...tokens(user) });
+  res.json({ user: { id: user._id, name: user.name, email: user.email, tenantId: user.tenantId, role: user.role }, ...issue(res, user) });
 }
 
 async function sendResetEmail(email: string, token: string) {
@@ -73,15 +85,59 @@ export async function resetPassword(req: Request, res: Response) {
   user.passwordHash = await bcrypt.hash(req.body.newPassword, 12);
   user.resetToken = undefined;
   user.resetTokenExpiry = undefined;
+  // A password reset must kick every existing session — that is the whole point
+  // of resetting after a suspected compromise.
+  user.tokenVersion = (user.tokenVersion ?? 0) + 1;
   await user.save();
+  clearAuthCookies(res);
   res.json({ message: "Password reset successfully. You can now sign in." });
 }
 
 export async function refresh(req: Request, res: Response) {
-  const payload = verifyRefreshToken(req.body.refreshToken);
+  // Body is still accepted so existing API clients keep working.
+  const token = req.cookies?.[REFRESH_COOKIE] ?? req.body?.refreshToken;
+  if (!token) return res.status(401).json({ message: "Refresh token required" });
+
+  let payload;
+  try {
+    payload = verifyRefreshToken(token);
+  } catch {
+    clearAuthCookies(res);
+    return res.status(401).json({ message: "Invalid or expired refresh token" });
+  }
+
   const user = await User.findOne({ _id: payload.id, tenantId: payload.tenantId });
-  if (!user) return res.status(401).json({ message: "Invalid refresh token" });
-  res.json(tokens(user));
+  if (!user) {
+    clearAuthCookies(res);
+    return res.status(401).json({ message: "Invalid refresh token" });
+  }
+  // Rejects tokens minted before the last logout / password reset.
+  if ((user.tokenVersion ?? 0) !== payload.tokenVersion) {
+    clearAuthCookies(res);
+    return res.status(401).json({ message: "Session has been revoked. Please sign in again." });
+  }
+  // Re-issuing from the DB row (not the token) means role changes take effect here.
+  res.json(issue(res, user));
+}
+
+/**
+ * Exchanges the httpOnly session cookie for a short-lived socket ticket. The
+ * dashboard needs this because Socket.IO talks to the API origin directly, where
+ * the cookie is not sent.
+ */
+export async function socketTicket(req: Request, res: Response) {
+  const user = req.user!;
+  res.json({ ticket: signSocketTicket(user) });
+}
+
+export async function logout(req: Request, res: Response) {
+  // Bumping the version is what actually revokes; clearing cookies only ends
+  // this browser's session. Access tokens still die on their own 15m expiry.
+  if (req.user?.id) {
+    await User.updateOne({ _id: req.user.id }, { $inc: { tokenVersion: 1 } });
+  }
+  clearAuthCookies(res);
+  res.status(204).end();
 }
 
 export async function me(req: Request, res: Response) {

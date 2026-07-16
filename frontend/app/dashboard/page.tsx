@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { StatCard, Badge } from "@/components/ui";
 import {
   MessageSquare, TicketCheck, TrendingUp, AlertTriangle,
@@ -377,8 +377,8 @@ export default function DashboardPage() {
   const [userInfo, setUserInfo] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-    setUserInfo({ name: u.name ?? "", role: u.role ?? "agent" });
+    const hint = readSessionHint();
+    setUserInfo({ name: hint?.name ?? "", role: hint?.role ?? "agent" });
     api.get("/analytics/overview").then((r) => setOverview(r.data));
     api.get("/analytics/charts").then((r) => setCharts(r.data));
     api.get("/tickets", { params: { limit: 5 } }).then((r) => setRecentTickets(r.data.items ?? []));

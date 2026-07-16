@@ -19,10 +19,41 @@
   let config = null;
   let sessionId = sessionStorage.getItem(STORAGE_KEY + "_sid") || null;
   let conversationId = sessionStorage.getItem(STORAGE_KEY + "_cid") || null;
+  // Issued by POST /api/chat/session. Every subsequent chat call proves which
+  // tenant and conversation it belongs to with this instead of passing a raw
+  // tenantId the server would have to take on trust.
+  let sessionToken = sessionStorage.getItem(STORAGE_KEY + "_tok") || null;
   let isOpen = false;
   let isHumanActive = false;
   let socket = null;
   let lastUserMsg = "Support request";
+
+  const sessionHeaders = (extra) =>
+    Object.assign({ "content-type": "application/json", "x-session-token": sessionToken }, extra || {});
+
+  function clearSession() {
+    sessionStorage.removeItem(STORAGE_KEY + "_sid");
+    sessionStorage.removeItem(STORAGE_KEY + "_cid");
+    sessionStorage.removeItem(STORAGE_KEY + "_tok");
+    sessionId = conversationId = sessionToken = null;
+  }
+
+  async function startSession() {
+    const res = await fetch(`${API}/api/chat/session`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      mode: "cors",
+      body: JSON.stringify({ tenantId }),
+    });
+    if (!res.ok) throw new Error(`Session error: ${res.status}`);
+    const data = await res.json();
+    sessionId = data.sessionId;
+    conversationId = data.conversationId ?? null;
+    sessionToken = data.sessionToken;
+    if (sessionId) sessionStorage.setItem(STORAGE_KEY + "_sid", sessionId);
+    if (conversationId) sessionStorage.setItem(STORAGE_KEY + "_cid", conversationId);
+    if (sessionToken) sessionStorage.setItem(STORAGE_KEY + "_tok", sessionToken);
+  }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
   const esc = (s) =>
@@ -77,16 +108,15 @@
 
   // ── Send a message (SSE streaming) ──────────────────────────────────────
   async function send(text) {
-    if (!text.trim() || !sessionId) return;
+    if (!text.trim() || !sessionToken) return;
     lastUserMsg = text;
 
     addMsg(text, "user");
 
     // If a human agent is active, send via socket only (agent sees it in real-time, no AI)
+    // The server derives the conversation from the handshake token.
     if (isHumanActive) {
-      if (socket && conversationId) {
-        socket.emit("customer:message", { conversationId, content: text });
-      }
+      if (socket) socket.emit("customer:message", { content: text });
       return;
     }
 
@@ -99,10 +129,20 @@
     try {
       const res = await fetch(`${API}/api/chat/message`, {
         method: "POST",
-        headers: { "content-type": "application/json", accept: "text/event-stream" },
+        headers: sessionHeaders({ accept: "text/event-stream" }),
         mode: "cors",
-        body: JSON.stringify({ tenantId, sessionId, message: text }),
+        body: JSON.stringify({ message: text }),
       });
+
+      // A 24h session token can expire mid-conversation; start a fresh one rather
+      // than leaving the widget permanently broken.
+      if (res.status === 401) {
+        clearSession();
+        await startSession();
+        typingEl.className = "msg bot";
+        typingEl.innerHTML = md("Your session expired. Please send that again.");
+        return;
+      }
 
       if (!res.ok || !res.body) {
         typingEl.className = "msg bot";
@@ -161,13 +201,21 @@
 
   // ── Load Socket.io and connect ───────────────────────────────────────────
   function connectSocket() {
-    if (!conversationId) return;
+    if (!conversationId || !sessionToken) return;
     const s = document.createElement("script");
     s.src = `${SOCKET_URL}/socket.io/socket.io.js`;
     s.onload = () => {
-      socket = window.io(SOCKET_URL, { transports: ["websocket"], autoConnect: true });
+      // The server authenticates the handshake, so the token goes in `auth`.
+      socket = window.io(SOCKET_URL, {
+        transports: ["websocket"],
+        autoConnect: true,
+        auth: { sessionToken },
+      });
       socket.on("connect", () => {
         socket.emit("join:conversation", { conversationId });
+      });
+      socket.on("connect_error", (err) => {
+        console.warn("[MagneticAI] live connection unavailable:", err.message);
       });
       socket.on("message:new", (msg) => {
         if (msg.role === "assistant" && msg.eventType === "human_joined") {
@@ -434,40 +482,29 @@
       }
 
       // ── Create or restore session ─────────────────────────────────────────
-      if (sessionId && conversationId) {
-        // Resume existing session — restore previous messages
+      // Try to resume first; fall back to a fresh session if the stored token is
+      // gone or the server no longer accepts it.
+      if (sessionToken && conversationId) {
         try {
-          const histRes = await fetch(`${API}/api/chat/history/${sessionId}?tenantId=${tenantId}`, { mode: "cors" });
+          // The token identifies the conversation, so sessionId is not in the URL.
+          const histRes = await fetch(`${API}/api/chat/history`, { mode: "cors", headers: sessionHeaders() });
           if (histRes.ok) {
-            const histData = await histRes.json();
-            const prevMsgs = histData.messages ?? [];
+            const prevMsgs = (await histRes.json()).messages ?? [];
             if (prevMsgs.length > 0) {
-              // Clear the welcome message and render history
+              // Replace the welcome message with the real history
               msgs().innerHTML = "";
               prevMsgs.forEach((m) => addMsg(m.content, m.role === "user" ? "user" : "bot"));
             }
+          } else {
+            clearSession();
           }
-        } catch {}
-        // Reconnect socket for live updates
-        connectSocket();
-      } else {
-        // Start a brand new session
-        const sessRes = await fetch(`${API}/api/chat/session`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          mode: "cors",
-          body: JSON.stringify({ tenantId }),
-        });
-        if (!sessRes.ok) throw new Error(`Session error: ${sessRes.status}`);
-        const sessData = await sessRes.json();
-        sessionId      = sessData.sessionId;
-        conversationId = sessData.conversationId ?? null;
-        // Persist to sessionStorage
-        if (sessionId)      sessionStorage.setItem(STORAGE_KEY + "_sid", sessionId);
-        if (conversationId) sessionStorage.setItem(STORAGE_KEY + "_cid", conversationId);
-        // Connect socket only when we have a real conversation
-        if (conversationId) connectSocket();
+        } catch {
+          // Network hiccup — keep the session and let the next send retry.
+        }
       }
+
+      if (!sessionToken) await startSession();
+      connectSocket();
 
       // ── Toggle ──────────────────────────────────────────────────────────
       $(".toggle").onclick = () => setOpen(!isOpen);
@@ -507,10 +544,9 @@
         try {
           const r = await fetch(`${API}/api/chat/ticket`, {
             method: "POST",
-            headers: { "content-type": "application/json" },
+            headers: sessionHeaders(),
             mode: "cors",
             body: JSON.stringify({
-              tenantId, sessionId,
               customerName: name, customerEmail: email,
               description: lastUserMsg,
             }),

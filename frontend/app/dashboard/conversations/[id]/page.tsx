@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { socket } from "@/lib/socket";
+import { connectAsAgent, socket } from "@/lib/socket";
 import { Badge, Loading, Spinner } from "@/components/ui";
 import {
   ArrowLeft, Bot, User, Send, Trash2, UserCheck,
@@ -46,15 +46,16 @@ export default function ConversationDetailPage() {
   useEffect(() => {
     if (!id) return;
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-
-    if (!socket.connected) socket.connect();
-
+    // Identity is established in the handshake now, so join carries no token.
     const onConnect = () => {
       setSocketConnected(true);
-      socket.emit("join:conversation", { conversationId: id, token });
+      socket.emit("join:conversation", { conversationId: id });
     };
     const onDisconnect = () => setSocketConnected(false);
+    const onConnectError = (err: Error) => {
+      setSocketConnected(false);
+      if (err.message === "Unauthorized") toast.error("Live connection rejected — try reloading.");
+    };
     const onNewMessage = (msg: any) => {
       setMessages((prev) => prev.find((m) => m._id === msg._id) ? prev : [...prev, msg]);
       setCustomerTyping(false);
@@ -68,6 +69,7 @@ export default function ConversationDetailPage() {
     const onTypingStop = () => setCustomerTyping(false);
 
     socket.on("connect", onConnect);
+    socket.on("connect_error", onConnectError);
     socket.on("disconnect", onDisconnect);
     socket.on("message:new", onNewMessage);
     socket.on("customer:message", onNewMessage);
@@ -75,15 +77,18 @@ export default function ConversationDetailPage() {
     socket.on("typing:start", onTypingStart);
     socket.on("typing:stop", onTypingStop);
 
-    // If already connected, join immediately
     if (socket.connected) {
       setSocketConnected(true);
-      socket.emit("join:conversation", { conversationId: id, token });
+      socket.emit("join:conversation", { conversationId: id });
+    } else {
+      // Fetches a socket ticket first — the server authenticates the handshake.
+      connectAsAgent().catch(() => toast.error("Could not open live connection."));
     }
 
     return () => {
       socket.emit("leave:conversation", { conversationId: id });
       socket.off("connect", onConnect);
+      socket.off("connect_error", onConnectError);
       socket.off("disconnect", onDisconnect);
       socket.off("message:new", onNewMessage);
       socket.off("customer:message", onNewMessage);

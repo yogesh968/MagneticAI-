@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -28,8 +28,13 @@ const features = [
   { icon: BarChart3, title: "Deep Analytics", desc: "30-day trends and AI resolution rate" },
 ];
 
+/** Only accept same-site relative paths — a caller-supplied ?next= is an open-redirect otherwise. */
+const safeNext = (next: string | null) =>
+  next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+
 export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const {
@@ -40,14 +45,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
     try {
       const endpoint = mode === "forgot" ? "/auth/forgot-password" : `/auth/${mode}`;
       const { data } = await api.post(endpoint, values);
-      if (data.accessToken) {
-        localStorage.setItem("accessToken", data.accessToken);
-        localStorage.setItem("refreshToken", data.refreshToken);
-        if (data.user) localStorage.setItem("user", JSON.stringify(data.user));
-        toast.success(mode === "register" ? `Welcome aboard, ${data.user?.name ?? ""}!` : "Welcome back!");
-        // Role-based redirect
-        const role = data.user?.role;
-        router.push(role === "superadmin" ? "/admin" : "/dashboard");
+      if (data.user) {
+        // The server set httpOnly cookies on this response — nothing to persist here.
+        toast.success(mode === "register" ? `Welcome aboard, ${data.user.name ?? ""}!` : "Welcome back!");
+        const role = data.user.role;
+        const dest = safeNext(searchParams.get("next")) ?? (role === "superadmin" ? "/admin" : "/dashboard");
+        router.replace(dest);
+        // Re-run the server layouts so they pick up the new session cookie.
+        router.refresh();
         return;
       }
       toast.success(data.message ?? "Done!");

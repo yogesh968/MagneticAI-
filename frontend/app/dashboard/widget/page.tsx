@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { Loading, PageHeader, Spinner } from "@/components/ui";
 import toast from "react-hot-toast";
 import { Code2, Copy, Check, ExternalLink, Palette, Monitor } from "lucide-react";
@@ -27,8 +27,7 @@ export default function WidgetPage() {
   const position = watch("widgetPosition");
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") ?? "{}");
-    setTenantId(user.tenantId ?? "");
+    setTenantId(readSessionHint()?.tenantId ?? "");
     api.get("/config/bot")
       .then((r) => {
         reset({
