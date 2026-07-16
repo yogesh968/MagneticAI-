@@ -39,17 +39,24 @@ The system follows a modular full-stack architecture:
 
 ### Multi-Tenant Support
 
-- Tenant-scoped users, conversations, tickets, documents, analytics, and bot settings.
+- Tenant-scoped users, conversations, tickets, documents, analytics, and bots.
 - JWT-based tenant resolution for protected dashboard APIs.
 - Tenant-specific Qdrant collections for knowledge-base isolation.
 
+### Multiple Bots per Tenant
+
+- Each bot has its own name, description, personality, welcome message, escalation rules, and widget colour.
+- **Each bot has its own knowledge base.** A document belongs to exactly one bot, and a bot only ever answers from its own documents.
+- Each bot gets its own embed snippet (`data-bot-id`), so different bots can run on different sites or pages.
+- One bot per tenant is the *default*: it answers legacy `data-tenant-id` embeds, WhatsApp, and email-to-ticket.
+
 ### AI Knowledge-Base Answers
 
-- Upload `.pdf`, `.docx`, `.txt`, and `.md` files.
-- Parse documents into chunks and index them into Qdrant.
-- Retrieve relevant chunks at question time.
+- Upload `.pdf`, `.docx`, `.txt`, and `.md` files, scoped to a bot you pick.
+- Parse documents into chunks and index them into Qdrant, tagged with the owning bot.
+- Retrieve relevant chunks at question time, filtered to the answering bot.
 - Generate grounded AI replies using Groq.
-- Reindex documents when knowledge-base content changes.
+- Reindex a bot's documents when its knowledge-base content changes.
 
 ### Real-Time Chat
 
@@ -89,24 +96,38 @@ The system follows a modular full-stack architecture:
 ## Architecture
 
 ```text
-Customer Website
-    |
-    |  Embeds /widget.js
-    v
-Magnetic AI Widget
-    |
-    |  Public chat APIs + Socket.IO
-    v
-Express API
-    |
-    |-- MongoDB: tenants, users, tickets, conversations, messages
-    |-- Qdrant: tenant-specific document vectors
-    |-- Cohere: document and query embeddings
-    |-- Groq: AI response generation
-    |
-    v
-Next.js Dashboard
+Customer Website                         Agent / Admin browser
+    |                                          |
+    |  Embeds /widget.js                       |  httpOnly session cookie
+    |  (data-bot-id)                           v
+    v                                    Next.js Dashboard
+Magnetic AI Widget                         |  middleware.ts verifies the cookie
+    |                                      |  server-side before a page renders
+    |  Public chat APIs + Socket.IO        |
+    |  (signed session token)              |  rewrites /api/* ──┐
+    |                                                           |
+    +──────────────────────> Express API <──────────────────────┘
+                                 |
+                                 |-- MongoDB: tenants, users, bots, tickets,
+                                 |            conversations, messages, documents
+                                 |-- Qdrant: per-tenant collections, points
+                                 |           tagged with botId
+                                 |-- Embeddings: document and query vectors
+                                 |-- Groq: AI response generation
 ```
+
+Two things in that diagram are load-bearing:
+
+**The dashboard reaches the API through a Next.js rewrite, not directly.** Cookies
+are domain-scoped, so a backend on its own domain could never set a cookie the
+frontend's middleware can read. Proxying makes the browser see one origin, which
+is what lets auth live in an httpOnly cookie and lets `SameSite=Lax` serve as the
+CSRF defence. The widget is deliberately *not* proxied — it runs on customer
+domains and authenticates with a signed session token instead.
+
+**Qdrant collections are per-tenant, but retrieval filters on `botId`.** That
+filter is the only thing separating one bot's knowledge from another's within a
+tenant.
 
 ## Tech Stack
 
@@ -132,23 +153,26 @@ Next.js Dashboard
 .
 |-- backend/
 |   |-- src/
-|   |   |-- config/          # MongoDB, Qdrant, Groq configuration
+|   |   |-- config/          # env validation, CORS policies, MongoDB, Qdrant, Groq
 |   |   |-- controllers/     # Route handlers
-|   |   |-- middleware/      # Auth, tenant, RBAC, validation, errors
+|   |   |-- middleware/      # Auth, tenant, RBAC, webhook signatures, errors
 |   |   |-- models/          # Mongoose models
 |   |   |-- routes/          # API route definitions
+|   |   |-- scripts/         # One-off migrations
 |   |   |-- services/        # RAG, embeddings, document processing, escalation
 |   |   |-- socket/          # Socket.IO chat handlers
-|   |   |-- utils/           # Chunking, parsing, upload paths, JWT helpers
+|   |   |-- utils/           # Chunking, parsing, upload paths, JWT, cookies
 |   |   |-- app.ts           # Express application
 |   |   |-- server.ts        # HTTP and Socket.IO server
-|   |   `-- seed.ts          # Demo tenant, users, KB, tickets, conversations
+|   |   `-- seed.ts          # Demo tenant, users, bots, KB, tickets, conversations
 |   |-- tests/               # Unit and integration tests
 |   `-- widget/widget.js     # Embeddable customer chat widget
 |-- frontend/
 |   |-- app/                 # Next.js App Router pages
-|   |-- components/          # Auth and UI components
-|   `-- lib/                 # API and Socket.IO clients
+|   |-- components/          # Auth, bot selector, and UI components
+|   |-- lib/                 # API client, bots hook, route policy, session verify
+|   |-- middleware.ts        # Server-side route guard — runs before pages render
+|   `-- next.config.mjs      # API proxy (/api/* -> BACKEND_URL) + security headers
 |-- sample-kb/               # Sample documents used by the seed script
 |-- docker-compose.yml       # Local MongoDB and Qdrant services
 |-- package.json             # Root workspace scripts
@@ -167,11 +191,17 @@ Install the following before running the project locally:
 
 ## Environment Variables
 
+See `.env.example` for the annotated full list. The essentials:
+
 Create a backend environment file at `backend/.env`:
 
 ```env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/ai_support
+
+# Both REQUIRED, both >= 32 chars, and they must differ.
+# The server refuses to boot otherwise, and in production it also rejects these
+# placeholder values. Generate each with:  openssl rand -base64 48
 JWT_SECRET=replace_with_a_long_random_secret
 JWT_REFRESH_SECRET=replace_with_another_long_random_secret
 
@@ -181,24 +211,41 @@ COHERE_API_KEY=your_cohere_api_key
 QDRANT_URL=http://localhost:6333
 QDRANT_API_KEY=
 
+# Allowed dashboard origins (comma-separated) for the credentialed CORS policy.
 FRONTEND_URL=http://localhost:3000
 UPLOAD_DIR=uploads
 
-# Optional WhatsApp integration
-WHATSAPP_TENANT_ID=
+# Optional — required in production if you use these integrations
+EMAIL_WEBHOOK_SECRET=          # shared secret for the email-to-ticket webhook
+WHATSAPP_TENANT_ID=            # NOTE: pins all inbound WhatsApp to ONE tenant
 TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
+TWILIO_AUTH_TOKEN=             # also validates the Twilio webhook signature
 TWILIO_WHATSAPP_FROM=
 ```
 
 Create a frontend environment file at `frontend/.env.local`:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
+# Where Next.js proxies /api/* to. Server-side only — never sent to the browser.
+BACKEND_URL=http://localhost:5000
+
+# MUST match the backend's values exactly — middleware.ts verifies the session
+# cookie's signature with these. Server-side only (no NEXT_PUBLIC_ prefix).
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+
+# Socket.IO connects to the backend directly (not proxied), so this is public.
 NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
+
+# Only used to build the widget embed snippets shown in the dashboard.
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
-> Note: the backend requires `MONGODB_URI`. AI knowledge-base answers require valid `GROQ_API_KEY` and `COHERE_API_KEY` values.
+> The frontend needs `BACKEND_URL` and the two JWT secrets. Without them the API
+> proxy has nowhere to go and the route guard fails closed, so every dashboard
+> route redirects to `/login`.
+
+> AI knowledge-base answers require valid `GROQ_API_KEY` and `COHERE_API_KEY` values.
 
 ## Local Development
 
@@ -239,8 +286,9 @@ The seed script creates:
 
 - Acme Corp demo tenant
 - Admin and agent accounts
-- Sample bot configuration
-- Sample knowledge-base documents
+- **Two bots** — `AcmeBot` (default, general support) and `Product Expert` —
+  each with its own documents, so you can see per-bot knowledge bases immediately
+- Sample knowledge-base documents, split across those two bots
 - Sample conversations and tickets
 
 6. Start both development servers:
@@ -275,7 +323,8 @@ Run these from the repository root unless noted otherwise.
 | `npm run dev` | Start backend and frontend development servers together |
 | `npm run build` | Build backend TypeScript and frontend Next.js app |
 | `npm run lint` | Run linting for both workspaces |
-| `npm run seed` | Seed the backend with demo tenant data |
+| `npm run seed` | Seed the backend with a demo tenant, two bots, and knowledge bases |
+| `npm run migrate:multi-bot -w backend` | One-off: migrate a pre-multi-bot database (see below) |
 | `npm run dev -w backend` | Start only the backend API |
 | `npm run dev -w frontend` | Start only the frontend dashboard |
 | `npm run test -w backend` | Run backend tests |
@@ -298,30 +347,53 @@ Run these from the repository root unless noted otherwise.
 | `POST` | `/api/auth/login` | Public | Log in and receive tokens |
 | `POST` | `/api/auth/forgot-password` | Public | Request password reset |
 | `POST` | `/api/auth/reset-password` | Public | Reset password with token |
-| `POST` | `/api/auth/refresh` | Public | Refresh access token |
+| `POST` | `/api/auth/refresh` | Cookie | Rotate the session (reads the refresh cookie) |
 | `GET` | `/api/auth/me` | Authenticated | Get current user |
+| `POST` | `/api/auth/logout` | Authenticated | Revoke every session for this user |
+| `POST` | `/api/auth/socket-ticket` | Authenticated | Mint a 2-minute Socket.IO handshake ticket |
 | `POST` | `/api/auth/invite` | Admin | Invite a team member |
 | `DELETE` | `/api/auth/members/:id` | Admin | Remove a team member |
+
+Login and register set httpOnly `mg_at` / `mg_rt` cookies plus a readable
+`mg_session` hint used only for rendering. The tokens are also returned in the
+body for non-browser clients.
+
+### Bots
+
+| Method | Endpoint | Access | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/bots` | Authenticated | List bots with per-bot document counts |
+| `GET` | `/api/bots/:id` | Authenticated | Get one bot |
+| `POST` | `/api/bots` | Admin | Create a bot |
+| `PUT` | `/api/bots/:id` | Admin | Update a bot's persona, rules, or widget settings |
+| `POST` | `/api/bots/:id/default` | Admin | Make this the tenant's default bot |
+| `DELETE` | `/api/bots/:id` | Admin | Delete a bot, its documents and its vectors |
+| `POST` | `/api/bots/:id/test` | Admin | Ask this bot a question from the dashboard |
 
 ### Knowledge Base
 
 | Method | Endpoint | Access | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/kb/upload` | Admin | Upload and index a document |
-| `GET` | `/api/kb/documents` | Authenticated | List knowledge-base documents |
+| `POST` | `/api/kb/upload` | Admin | Upload and index a document (`botId` form field) |
+| `GET` | `/api/kb/documents` | Authenticated | List documents (`?botId=` to scope to one bot) |
 | `GET` | `/api/kb/documents/:id` | Authenticated | Get a document record |
 | `DELETE` | `/api/kb/documents/:id` | Admin | Delete a document |
-| `POST` | `/api/kb/reindex` | Admin | Rebuild vector index |
+| `POST` | `/api/kb/reindex` | Admin | Rebuild the vector index (`botId` to scope) |
 
 ### Chat
 
+Public, but not unauthenticated: `POST /api/chat/session` returns a signed
+`sessionToken`, and every other route requires it in an `x-session-token` header.
+The tenant, bot and conversation come from that token, never from the request
+body.
+
 | Method | Endpoint | Access | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/chat/session` | Public | Create a customer chat session |
-| `POST` | `/api/chat/message` | Public | Send a chat message |
-| `POST` | `/api/chat/message/stream` | Public | Stream an AI chat response |
-| `POST` | `/api/chat/ticket` | Public | Create a public support ticket |
-| `GET` | `/api/chat/history/:sessionId` | Public | Fetch chat history |
+| `POST` | `/api/chat/session` | Public | Start a session for a bot (`botId`, or `tenantId` for its default) |
+| `POST` | `/api/chat/message` | Session token | Send a chat message |
+| `POST` | `/api/chat/message/stream` | Session token | Stream an AI chat response |
+| `POST` | `/api/chat/ticket` | Session token | Create a public support ticket |
+| `GET` | `/api/chat/history` | Session token | Fetch this session's history |
 
 ### Tickets
 
@@ -340,7 +412,7 @@ Run these from the repository root unless noted otherwise.
 | --- | --- | --- | --- |
 | `GET` | `/api/conversations` | Authenticated | List conversations |
 | `GET` | `/api/conversations/:id` | Authenticated | Get conversation details |
-| `DELETE` | `/api/conversations/:id` | Authenticated | Delete a conversation |
+| `DELETE` | `/api/conversations/:id` | Admin | Delete a conversation |
 
 ### Analytics
 
@@ -351,59 +423,90 @@ Run these from the repository root unless noted otherwise.
 | `GET` | `/api/analytics/kb` | Admin | Knowledge-base analytics |
 | `GET` | `/api/analytics/escalations` | Admin | Escalation analytics |
 
-### Bot Configuration and Widget
+### Widget
 
 | Method | Endpoint | Access | Description |
 | --- | --- | --- | --- |
-| `GET` | `/api/config/bot` | Admin | Get bot settings |
-| `PUT` | `/api/config/bot` | Admin | Update bot settings |
-| `POST` | `/api/config/test` | Admin | Test the bot against current configuration |
-| `GET` | `/api/widget/:tenantId/config` | Public | Get public widget configuration |
+| `GET` | `/api/widget/bot/:botId/config` | Public | Public config for one bot |
+| `GET` | `/api/widget/:tenantId/config` | Public | Public config for a tenant's default bot |
 | `GET` | `/widget.js` | Public | Serve the embeddable widget script |
 
 ### Integrations
 
 | Method | Endpoint | Access | Description |
 | --- | --- | --- | --- |
-| `POST` | `/api/integrations/email` | Public webhook | Create a ticket from inbound email |
-| `POST` | `/api/integrations/whatsapp` | Public webhook | Handle WhatsApp messages through Twilio |
-| `POST` | `/api/integrations/whatsapp/webhook` | Public webhook | Alternate WhatsApp webhook path |
-| `GET` | `/api/integrations/status` | Public | Check integration configuration status |
+| `POST` | `/api/integrations/email` | Shared secret | Create a ticket from inbound email (`x-webhook-secret`) |
+| `POST` | `/api/integrations/whatsapp` | Twilio signature | Handle WhatsApp messages through Twilio |
+| `POST` | `/api/integrations/whatsapp/webhook` | Twilio signature | Alternate WhatsApp webhook path |
+| `GET` | `/api/integrations/status` | Admin | Check integration configuration status |
 
 ## Widget Embed
 
-Add the widget to a customer website with:
+Copy a bot's snippet from **Dashboard → Bots → Embed**, or build it yourself:
 
 ```html
 <script
   src="https://api.yourdomain.com/widget.js"
-  data-tenant-id="YOUR_TENANT_ID">
+  data-bot-id="YOUR_BOT_ID">
 </script>
 ```
+
+`data-bot-id` chooses which bot answers, and therefore which knowledge base the
+answers come from. Embedding two different bots on two different pages is the
+intended use.
 
 For local testing:
 
 ```html
 <script
   src="http://localhost:5000/widget.js"
-  data-tenant-id="YOUR_TENANT_ID">
+  data-bot-id="YOUR_BOT_ID">
 </script>
 ```
 
-The widget uses the tenant ID to fetch public bot settings from:
+The widget fetches public bot settings from:
 
 ```text
-GET /api/widget/:tenantId/config
+GET /api/widget/bot/:botId/config
 ```
+
+`data-tenant-id="YOUR_TENANT_ID"` still works and resolves to that tenant's
+default bot, for embeds that predate multi-bot support.
 
 ## Knowledge Base Workflow
 
-1. An admin uploads a supported document from the dashboard.
-2. The backend stores document metadata in MongoDB.
+1. An admin picks a bot in the dashboard and uploads a supported document to it.
+2. The backend stores document metadata — including its `botId` — in MongoDB.
 3. The parser extracts text from the file.
 4. The chunker splits content into searchable sections.
-5. Cohere generates embeddings for each chunk.
-6. Qdrant stores vectors in a tenant-specific collection.
+5. The embedding provider generates a vector for each chunk.
+6. Qdrant stores the vectors in the tenant's collection, each point tagged with `botId`.
+7. At question time, retrieval filters on the answering bot's `botId`, so a bot
+   only ever sees its own documents.
+
+If the embedding provider is unreachable, the document is marked `failed` with
+zero chunks and the Knowledge Base page says so — the bot stays answerable but
+has no context from that file. Use **Reindex** once the provider is back.
+
+## Migrating an Existing Database
+
+Databases created before multi-bot support need a one-off migration:
+
+```bash
+npm run migrate:multi-bot -w backend
+```
+
+It is idempotent, and it:
+
+- drops the legacy unique index on `botconfigs.tenantId` (until this is gone,
+  creating a second bot for a tenant fails with a duplicate-key error — removing
+  `unique: true` from the schema does not drop an index that already exists);
+- promotes each tenant's existing bot to its default, creating one if absent;
+- backfills `botId` onto existing documents and conversations;
+- stamps `botId` onto existing Qdrant points, which would otherwise match no
+  filter and leave every migrated bot answering from an empty knowledge base.
+
+Run it **before** starting the new backend against an existing database.
 7. Customer questions are embedded and matched against the tenant collection.
 8. Groq receives the retrieved context and generates the final answer.
 
@@ -445,12 +548,17 @@ The backend includes deployment configuration for Railway and Vercel:
 Make sure production environments provide:
 
 - `MONGODB_URI`
-- `JWT_SECRET`
+- `JWT_SECRET` and `JWT_REFRESH_SECRET` — both required, >= 32 chars, different
+  from each other, and not the shipped placeholders. The server refuses to boot
+  otherwise.
 - `GROQ_API_KEY`
 - `COHERE_API_KEY`
 - `QDRANT_URL`
 - `QDRANT_API_KEY`, if using a secured Qdrant instance
-- `FRONTEND_URL`
+- `FRONTEND_URL` — the dashboard origin(s), comma-separated. This is the CORS
+  allowlist, not a cosmetic setting.
+- `EMAIL_WEBHOOK_SECRET` / `TWILIO_AUTH_TOKEN`, if using those integrations
+- `PUBLIC_API_URL`, only if Twilio webhooks reach you through a proxy
 
 ### Frontend
 
@@ -460,8 +568,25 @@ The frontend includes Vercel configuration:
 
 Set these production variables:
 
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_SOCKET_URL`
+- `BACKEND_URL` — the backend's origin. Next.js proxies `/api/*` here.
+  Server-side only; do not prefix with `NEXT_PUBLIC_`.
+- `JWT_SECRET` and `JWT_REFRESH_SECRET` — **must match the backend exactly.**
+  The middleware verifies the session cookie with them and fails closed if they
+  are absent, which redirects every dashboard route to `/login`.
+- `NEXT_PUBLIC_SOCKET_URL` — the backend origin; Socket.IO is not proxied.
+- `NEXT_PUBLIC_API_URL` — the backend's public origin, used only to render
+  widget embed snippets.
+
+> The frontend and backend do not need to share a domain — the API proxy is what
+> makes the auth cookie same-origin. But if you change how the dashboard reaches
+> the API, re-read the Architecture section first: cookie auth and the route
+> guard both depend on that proxy.
+
+### Migrating an existing deployment
+
+Run `npm run migrate:multi-bot -w backend` against the production database
+**before** rolling out the new backend. See
+[Migrating an Existing Database](#migrating-an-existing-database).
 
 ### Services
 
@@ -475,11 +600,45 @@ Avoid relying on local container volumes for production data.
 
 ## Security Notes
 
-- Keep `JWT_SECRET`, provider API keys, and Twilio credentials out of source control.
+How auth works:
+
+- Access (15m) and refresh (7d) tokens live in httpOnly cookies, set on the
+  frontend origin via the API proxy. `SameSite=Lax` + same-origin is the CSRF
+  defence — do not switch the cookies to `SameSite=None` without adding CSRF
+  tokens.
+- `middleware.ts` verifies the cookie signature server-side before a page
+  renders, so protected routes never paint for a signed-out visitor. It fails
+  closed if the JWT secrets are missing.
+- The API is the security boundary and re-checks every request. The middleware
+  and the readable `mg_session` cookie only decide what renders; never gate
+  anything security-relevant on `mg_session`, which is client-writable by design.
+- Logout bumps a `tokenVersion`, which invalidates every outstanding refresh
+  token for that user, not just the current browser's. Password reset does the
+  same. Access tokens still live out their 15 minutes.
+- The public chat API authenticates with a signed session token rather than
+  trusting a `tenantId` in the request body.
+
+Operational:
+
+- Keep the JWT secrets, provider API keys, and Twilio credentials out of source
+  control. The backend refuses to boot in production with placeholder or short
+  (<32 char) secrets, or with `JWT_SECRET === JWT_REFRESH_SECRET`.
+- Set `FRONTEND_URL` to your real dashboard origin(s) — it is the allowlist for
+  the credentialed CORS policy.
+- Set `EMAIL_WEBHOOK_SECRET` and `TWILIO_AUTH_TOKEN` if you use those
+  integrations; in production their webhooks return 503 without them.
 - Use HTTPS in production for both dashboard and widget traffic.
-- Restrict webhook endpoints at the network or provider level when possible.
-- Review CORS settings before public production deployment.
 - Rotate demo credentials or disable seeded users in production.
+
+Known gaps:
+
+- The public chat API has no domain allowlist or per-bot key, so anyone holding
+  a bot id can start a session against it. It is rate limited per IP, but treat
+  a bot id as public.
+- The WhatsApp integration is single-tenant: `WHATSAPP_TENANT_ID` pins every
+  inbound message to one tenant regardless of which number it arrived on.
+- The admin portal's Tenants page does not list real tenants — there is no
+  superadmin tenant-listing endpoint yet.
 
 ## Roadmap
 
