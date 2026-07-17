@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useForm, useFieldArray } from "react-hook-form";
 import { api } from "@/lib/api";
-import { Loading, PageHeader, Spinner, Tabs } from "@/components/ui";
+import { useBots } from "@/lib/bots";
+import { BotSelector } from "@/components/BotSelector";
+import { Empty, Loading, PageHeader, Spinner, Tabs } from "@/components/ui";
 import toast from "react-hot-toast";
 import {
   Bot, Send, Plus, Trash2, Zap, MessageSquare,
-  Settings2, Sparkles, ShieldCheck,
+  Settings2, Sparkles, ShieldCheck, BookOpen,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -25,7 +28,8 @@ const PERSONALITY_OPTS = [
   { value: "technical",    label: "Technical",    desc: "Detailed, accurate, and technical" },
 ];
 
-export default function AiConfigPage() {
+function AiConfigClient() {
+  const { bots, selected, selectBot, reload: reloadBots, loading: botsLoading } = useBots();
   const [loading, setLoading] = useState(true);
   const [testQ, setTestQ] = useState("");
   const [testAnswer, setTestAnswer] = useState("");
@@ -43,8 +47,14 @@ export default function AiConfigPage() {
   const personality = watch("personality");
   const isActive    = watch("isActive");
 
+  const botId = selected?._id;
+
+  // Reload the form whenever the selected bot changes — each bot has its own persona.
   useEffect(() => {
-    api.get("/config/bot").then((r) => {
+    if (!botId) return;
+    setLoading(true);
+    setTestAnswer("");
+    api.get(`/bots/${botId}`).then((r) => {
       const d = r.data;
       reset({
         botName: d.botName,
@@ -55,43 +65,75 @@ export default function AiConfigPage() {
         suggestedQuestions: (d.suggestedQuestions ?? []).map((q: string) => ({ value: q })),
       });
       setLoading(false);
+    }).catch(() => {
+      toast.error("Could not load this bot");
+      setLoading(false);
     });
-  }, [reset]);
+  }, [botId, reset]);
 
   const save = async (values: FormValues) => {
+    if (!botId) return;
     try {
-      await api.put("/config/bot", {
+      await api.put(`/bots/${botId}`, {
         ...values,
         suggestedQuestions: values.suggestedQuestions.map((q) => q.value).filter(Boolean),
       });
-      toast.success("Configuration saved successfully");
+      toast.success(`${values.botName} saved`);
       reset(values);
+      void reloadBots();
     } catch (e: any) {
       toast.error(e.response?.data?.message ?? "Save failed");
     }
   };
 
   const runTest = async () => {
-    if (!testQ.trim()) return;
+    if (!testQ.trim() || !botId) return;
     setTesting(true);
     setTestAnswer("");
     try {
-      const { data } = await api.post("/config/test", { question: testQ });
+      const { data } = await api.post(`/bots/${botId}/test`, { question: testQ });
       setTestAnswer(data.answer ?? JSON.stringify(data, null, 2));
     } catch (e: any) {
       toast.error(e.response?.data?.message ?? "Test failed");
     } finally { setTesting(false); }
   };
 
-  if (loading) return <div className="p-8"><Loading rows={7} /></div>;
+  if (botsLoading) return <div className="p-8"><Loading rows={7} /></div>;
+
+  if (!bots?.length || !selected) {
+    return (
+      <div className="p-7 max-w-3xl mx-auto">
+        <PageHeader title="AI Configuration" subtitle="Configure each bot's identity and behaviour" />
+        <div className="rounded-2xl border border-hairline bg-white">
+          <Empty
+            title="No bots yet"
+            text="Create a bot before configuring one."
+            icon={<Bot size={28} />}
+            action={<Link href="/dashboard/bots" className="btn-primary gap-2"><Plus size={14} /> Create a bot</Link>}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-7 max-w-3xl mx-auto">
       <PageHeader
         title="AI Configuration"
-        subtitle="Configure your support bot's identity, behaviour, and escalation rules"
+        subtitle="Each bot has its own identity, behaviour, and escalation rules"
       />
 
+      {/* Bot scope bar — z-20 so the selector's dropdown paints above the form below. */}
+      <div className="card anim-up relative z-20 mb-5 flex flex-wrap items-end justify-between gap-4">
+        <BotSelector bots={bots} selected={selected} onSelect={selectBot} label="Configuring" />
+        <Link href={`/dashboard/knowledge-base?bot=${selected._id}`} className="btn-secondary btn-sm gap-1.5">
+          <BookOpen size={12} />
+          {selected.documentCount ?? 0} document{(selected.documentCount ?? 0) === 1 ? "" : "s"}
+        </Link>
+      </div>
+
+      {loading ? <Loading rows={7} /> : (
+        <>
       <Tabs
         active={tab}
         onChange={setTab}
@@ -108,17 +150,17 @@ export default function AiConfigPage() {
           {/* Identity */}
           <div className="card space-y-5">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50">
-                <Bot size={16} className="text-blue-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sunken">
+                <Bot size={16} className="text-ink" />
               </div>
               <p className="section-title">Bot Identity</p>
               <div className="ml-auto flex items-center gap-2.5">
-                <span className={`text-xs font-semibold ${isActive ? "text-emerald-600" : "text-slate-400"}`}>
+                <span className={`text-xs font-semibold ${isActive ? "text-emerald-600" : "text-ink-faint"}`}>
                   {isActive ? "Active" : "Inactive"}
                 </span>
                 <label className="relative inline-flex cursor-pointer">
                   <input type="checkbox" {...register("isActive")} className="sr-only peer" />
-                  <div className="h-6 w-11 rounded-full bg-slate-200 transition-colors peer-checked:bg-emerald-500" />
+                  <div className="h-6 w-11 rounded-full bg-hairline transition-colors peer-checked:bg-emerald-500" />
                   <div className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
                 </label>
               </div>
@@ -172,8 +214,8 @@ export default function AiConfigPage() {
             </div>
 
             {rules.length === 0 && (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center">
-                <p className="text-xs text-slate-400">Using default escalation keywords (refund, legal, angry, etc.)</p>
+              <div className="rounded-xl border border-dashed border-hairline bg-sunken px-4 py-4 text-center">
+                <p className="text-xs text-ink-faint">Using default escalation keywords (refund, legal, angry, etc.)</p>
               </div>
             )}
 
@@ -191,7 +233,7 @@ export default function AiConfigPage() {
                     <option value="high">High</option>
                     <option value="urgent">Urgent</option>
                   </select>
-                  <button type="button" onClick={() => rmRule(i)} className="btn-ghost btn-sm p-2 text-slate-400 hover:text-red-500 shrink-0">
+                  <button type="button" onClick={() => rmRule(i)} className="btn-ghost btn-sm p-2 text-ink-faint hover:text-red-500 shrink-0">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -203,12 +245,12 @@ export default function AiConfigPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50">
-                  <MessageSquare size={16} className="text-blue-600" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sunken">
+                  <MessageSquare size={16} className="text-ink" />
                 </div>
                 <div>
                   <p className="section-title">Suggested Questions</p>
-                  <p className="hint mt-0">Quick-start prompts shown in the chat widget (max 5)</p>
+                  <p className="hint mt-0">Quick-start prompts shown in the chat widget (max 5). The first 3 also appear on the teaser card.</p>
                 </div>
               </div>
               {qs.length < 5 && (
@@ -219,8 +261,11 @@ export default function AiConfigPage() {
             </div>
 
             {qs.length === 0 && (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-center">
-                <p className="text-xs text-slate-400">No suggested questions — customers will see only the text input.</p>
+              <div className="rounded-xl border border-dashed border-hairline bg-sunken px-4 py-4 text-center">
+                <p className="text-xs text-ink-faint">
+                  None set — the widget falls back to generic prompts, which your knowledge base probably
+                  can&apos;t answer. Add questions your documents actually cover.
+                </p>
               </div>
             )}
 
@@ -232,7 +277,7 @@ export default function AiConfigPage() {
                     placeholder={`Question ${i + 1}…`}
                     className="input flex-1"
                   />
-                  <button type="button" onClick={() => rmQ(i)} className="btn-ghost btn-sm p-2 text-slate-400 hover:text-red-500 shrink-0">
+                  <button type="button" onClick={() => rmQ(i)} className="btn-ghost btn-sm p-2 text-ink-faint hover:text-red-500 shrink-0">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -255,8 +300,8 @@ export default function AiConfigPage() {
         <div className="space-y-4 anim-up">
           <div className="card space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50">
-                <Sparkles size={16} className="text-purple-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sunken">
+                <Sparkles size={16} className="text-ink" />
               </div>
               <div>
                 <p className="section-title">Test your AI bot</p>
@@ -275,10 +320,10 @@ export default function AiConfigPage() {
                 <button
                   key={q}
                   onClick={() => setTestQ(q)}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                     testQ === q
-                      ? "border-blue-400 bg-blue-600 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-700"
+                      ? "border-ink bg-ink text-white"
+                      : "border-hairline bg-white text-ink-muted hover:border-hairline-strong hover:text-ink"
                   }`}
                 >
                   {q}
@@ -306,8 +351,8 @@ export default function AiConfigPage() {
 
           {testing && (
             <div className="card flex items-center gap-3 anim-up">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
-                <Bot size={14} className="text-blue-600" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sunken">
+                <Bot size={14} className="text-ink" />
               </div>
               <div className="space-y-1.5 flex-1">
                 <div className="skeleton h-3 w-3/4" />
@@ -320,16 +365,16 @@ export default function AiConfigPage() {
           {testAnswer && !testing && (
             <div className="card anim-scale">
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-ink to-ink-soft shadow-sm">
                   <Bot size={16} className="text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">Bot response</p>
-                  <p className="text-xs text-slate-400">Powered by Groq llama-3.3-70b</p>
+                  <p className="text-sm font-semibold text-ink">Bot response</p>
+                  <p className="text-xs text-ink-faint">Powered by Groq llama-3.3-70b</p>
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-5 py-4">
-                <div className="prose prose-sm max-w-none text-slate-700 [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>h3]:font-semibold">
+              <div className="rounded-xl border border-hairline bg-sunken px-5 py-4">
+                <div className="prose prose-sm max-w-none text-ink-soft [&>p]:mb-3 [&>ul]:mb-3 [&>ol]:mb-3 [&>h3]:font-semibold">
                   <ReactMarkdown>{testAnswer}</ReactMarkdown>
                 </div>
               </div>
@@ -337,6 +382,17 @@ export default function AiConfigPage() {
           )}
         </div>
       )}
+        </>
+      )}
     </div>
+  );
+}
+
+export default function AiConfigPage() {
+  // useBots reads ?bot= via useSearchParams, which needs a Suspense boundary.
+  return (
+    <Suspense fallback={<div className="p-8"><Loading rows={7} /></div>}>
+      <AiConfigClient />
+    </Suspense>
   );
 }

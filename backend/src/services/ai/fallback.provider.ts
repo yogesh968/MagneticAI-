@@ -21,7 +21,7 @@ export class FallbackProvider implements AIProvider {
       body: JSON.stringify({
         model: this.defaultModel,
         messages,
-        max_tokens: 1024,
+        max_tokens: 400,
         temperature: 0.3,
         stream: false,
       }),
@@ -50,7 +50,7 @@ export class FallbackProvider implements AIProvider {
       body: JSON.stringify({
         model: this.defaultModel,
         messages,
-        max_tokens: 1024,
+        max_tokens: 400,
         temperature: 0.3,
         stream: true,
       }),

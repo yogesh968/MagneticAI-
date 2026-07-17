@@ -53,7 +53,7 @@ export default function TicketDetailPage() {
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200/60 px-2.5 py-1 rounded-lg">
+            <span className="font-mono text-xs font-bold text-ink bg-sunken border border-hairline px-2.5 py-1 rounded-lg">
               {t.ticketNumber}
             </span>
             <Badge tone={PRIORITY_TONE[t.priority] ?? "slate"}>{t.priority}</Badge>
@@ -75,12 +75,12 @@ export default function TicketDetailPage() {
           {/* Description */}
           <div className="card anim-up d2">
             <div className="flex items-center gap-2 mb-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100">
-                <Info size={14} className="text-slate-500" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken">
+                <Info size={14} className="text-ink-muted" />
               </div>
               <p className="section-title">Description</p>
             </div>
-            <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50 rounded-xl px-4 py-3">
+            <p className="text-sm text-ink leading-relaxed whitespace-pre-wrap bg-sunken rounded-xl px-4 py-3">
               {t.description}
             </p>
           </div>
@@ -89,11 +89,11 @@ export default function TicketDetailPage() {
           {messages.length > 0 && (
             <div className="card anim-up d3">
               <div className="flex items-center gap-2 mb-4">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50">
-                  <MessageSquare size={14} className="text-blue-600" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken">
+                  <MessageSquare size={14} className="text-ink" />
                 </div>
                 <p className="section-title">Conversation</p>
-                <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
+                <span className="ml-auto rounded-full bg-sunken px-2.5 py-0.5 text-xs font-semibold text-ink-muted">
                   {messages.length} messages
                 </span>
               </div>
@@ -107,12 +107,12 @@ export default function TicketDetailPage() {
                   );
                   return (
                     <div key={m._id} className={`flex gap-2.5 ${isUser ? "flex-row-reverse" : ""}`}>
-                      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isUser ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+                      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isUser ? "bg-ink text-white" : "bg-sunken text-ink-muted"}`}>
                         {isUser ? <User size={12} /> : <Bot size={12} />}
                       </div>
                       <div className={isUser ? "bubble-user" : "bubble-bot"}>
                         <p>{m.content}</p>
-                        <p className={`mt-1.5 text-[10px] ${isUser ? "text-blue-200" : "text-slate-400"}`}>
+                        <p className={`mt-1.5 text-[10px] ${isUser ? "text-white/70" : "text-ink-faint"}`}>
                           {new Date(m.createdAt).toLocaleTimeString()}
                         </p>
                       </div>
@@ -134,11 +134,11 @@ export default function TicketDetailPage() {
 
             <div className="space-y-2 mb-4">
               {!t.notes?.length && (
-                <p className="text-sm text-slate-400 italic py-2">No notes yet — add one below.</p>
+                <p className="text-sm text-ink-faint italic py-2">No notes yet — add one below.</p>
               )}
               {t.notes?.map((n: any, i: number) => (
                 <div key={i} className="rounded-xl border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                  <p className="text-sm text-slate-700 leading-relaxed">{n.body}</p>
+                  <p className="text-sm text-ink leading-relaxed">{n.body}</p>
                   {n.createdAt && (
                     <p className="mt-1.5 text-xs text-amber-600/70">
                       {new Date(n.createdAt).toLocaleString()}
@@ -172,7 +172,7 @@ export default function TicketDetailPage() {
 
           {/* Status */}
           <div className="card anim-up d2">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Status</p>
+            <p className="label">Status</p>
             <select
               className="input"
               value={t.status}
@@ -188,7 +188,7 @@ export default function TicketDetailPage() {
 
           {/* Priority */}
           <div className="card anim-up d3">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Priority</p>
+            <p className="label">Priority</p>
             <select
               className="input"
               value={t.priority}
@@ -204,12 +204,12 @@ export default function TicketDetailPage() {
 
           {/* Details */}
           <div className="card anim-up d4">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Details</p>
-            <div className="divide-y divide-slate-100">
-              <InfoRow label="Ticket #" value={<span className="font-mono text-blue-600 font-bold text-xs">{t.ticketNumber}</span>} />
+            <p className="label">Details</p>
+            <div className="divide-y divide-hairline">
+              <InfoRow label="Ticket #" value={<span className="font-mono text-ink font-bold text-xs">{t.ticketNumber}</span>} />
               <InfoRow label="Customer" value={t.customerName || "—"} />
               <InfoRow label="Email" value={<span className="text-xs truncate max-w-[130px] block">{t.customerEmail || "—"}</span>} />
-              <InfoRow label="Assigned" value={t.assignedTo?.name || <span className="text-slate-400 italic">Unassigned</span>} />
+              <InfoRow label="Assigned" value={t.assignedTo?.name || <span className="text-ink-faint italic">Unassigned</span>} />
               <InfoRow label="Created" value={new Date(t.createdAt).toLocaleDateString()} />
               {t.resolvedAt && (
                 <InfoRow label="Resolved" value={<span className="text-emerald-600 font-semibold">{new Date(t.resolvedAt).toLocaleDateString()}</span>} />
@@ -220,7 +220,7 @@ export default function TicketDetailPage() {
           {/* Quick actions */}
           {t.status !== "resolved" && t.status !== "closed" && (
             <div className="card anim-up d5 space-y-2">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Quick Actions</p>
+              <p className="label">Quick Actions</p>
               <button
                 onClick={() => update({ status: "resolved" })}
                 disabled={saving}

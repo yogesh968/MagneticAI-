@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/seed.ts",
+    "migrate:multi-bot": "tsx src/scripts/migrate-multi-bot.ts",
     "lint": "eslint src --ext .ts",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest --forceExit",
     "test:unit": "NODE_OPTIONS='--experimental-vm-modules --no-webstorage' jest tests/unit --forceExit",
@@ -39,6 +40,7 @@
   "dependencies": {
     "@qdrant/js-client-rest": "^1.13.0",
     "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -59,6 +61,7 @@
   "devDependencies": {
     "@eslint/js": "^9.22.0",
     "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",

@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import { Inter, Inter_Tight } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
+
+// Self-hosted at build time: no render-blocking round trip to Google, and no
+// swap flash. The whole type scale is tuned for these two — a fallback breaks it.
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" });
+const interTight = Inter_Tight({ subsets: ["latin"], display: "swap", variable: "--font-inter-tight" });
 
 export const metadata: Metadata = {
   title: { default: "Magentic AI", template: "%s · Magentic AI" },
@@ -9,14 +15,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className={`h-full ${inter.variable} ${interTight.variable}`}>
       <body className="h-full">
         <Toaster
           position="top-right"
           toastOptions={{
-            style: { borderRadius: "12px", fontSize: "14px", fontFamily: "Inter, sans-serif", boxShadow: "0 8px 30px rgb(0,0,0,0.12)" },
-            success: { iconTheme: { primary: "#22c55e", secondary: "#fff" } },
-            error: { iconTheme: { primary: "#ef4444", secondary: "#fff" } },
+            style: {
+              borderRadius: "12px",
+              fontSize: "14px",
+              fontFamily: "var(--font-inter), Inter, system-ui, sans-serif",
+              border: "1px solid #E8E6E1",
+              boxShadow: "0 8px 30px rgb(0,0,0,0.12)",
+            },
+            success: { iconTheme: { primary: "#0F9D63", secondary: "#fff" } },
+            error: { iconTheme: { primary: "#DC2626", secondary: "#fff" } },
           }}
         />
         {children}

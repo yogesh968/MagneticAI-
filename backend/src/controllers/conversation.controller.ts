@@ -12,8 +12,10 @@ export async function listConversations(req: Request, res: Response) {
     filter.$or = [{ customerName: search }, { customerEmail: search }, { _id: { $in: conversationIds } }];
   }
   if (req.query.from || req.query.to) filter.createdAt = { ...(req.query.from ? { $gte: new Date(String(req.query.from)) } : {}), ...(req.query.to ? { $lte: new Date(String(req.query.to)) } : {}) };
+  // Lets the dashboard answer "which bot handled this conversation?"
+  if (req.query.botId) filter.botId = req.query.botId;
   const [items, total] = await Promise.all([
-    Conversation.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    Conversation.find(filter).populate("botId", "botName settings.widgetColor").sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     Conversation.countDocuments(filter)
   ]);
   const lastMessages = await Message.aggregate([{ $match: { tenantId: req.tenantId, conversationId: { $in: items.map((item) => item._id) } } }, { $sort: { createdAt: -1 } }, { $group: { _id: "$conversationId", content: { $first: "$content" }, createdAt: { $first: "$createdAt" } } }]);
@@ -21,7 +23,8 @@ export async function listConversations(req: Request, res: Response) {
 }
 
 export async function getConversation(req: Request, res: Response) {
-  const conversation = await Conversation.findOne({ _id: req.params.id, tenantId: req.tenantId, deletedAt: { $exists: false } });
+  const conversation = await Conversation.findOne({ _id: req.params.id, tenantId: req.tenantId, deletedAt: { $exists: false } })
+    .populate("botId", "botName settings.widgetColor");
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
   res.json({ conversation, messages: await Message.find({ conversationId: conversation._id, tenantId: req.tenantId }).sort({ createdAt: 1 }) });
 }

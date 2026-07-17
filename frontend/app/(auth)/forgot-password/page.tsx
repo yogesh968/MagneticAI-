@@ -5,90 +5,96 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import { Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { FieldError, FieldLabel, SubmitButton } from "@/components/auth/fields";
+import { authInput } from "@/components/auth/shared";
 
 const schema = z.object({ email: z.string().email("Enter a valid email") });
+type Values = z.infer<typeof schema>;
 
 export default function ForgotPasswordPage() {
-  const [sent, setSent] = useState(false);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<any>({
-    resolver: zodResolver(schema),
-  });
+  const [sentTo, setSentTo] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "" } });
 
-  const submit = async (values: any) => {
+  const submit = async (values: Values) => {
     try {
       await api.post("/auth/forgot-password", values);
-      setSent(true);
+      setSentTo(values.email);
     } catch (e: any) {
       toast.error(e.response?.data?.message ?? "Something went wrong");
     }
   };
 
-  if (sent) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-        <div className="w-full max-w-[400px] space-y-4">
-          <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
-            <CheckCircle2 size={40} className="mx-auto mb-3 text-green-500" />
-            <p className="text-lg font-bold text-green-800">Check your email</p>
-            <p className="mt-2 text-sm text-green-700">
-              If an account exists for that address, you&apos;ll receive a password reset link shortly.
+  return (
+    <AuthShell
+      eyebrow="Account recovery"
+      headline={
+        <>
+          Locked out?
+          <br />
+          We&apos;ll get you back in.
+        </>
+      }
+      footnotes={["RESET LINKS EXPIRE IN 1 HOUR"]}
+    >
+      <div className="w-full max-w-[390px]">
+        {sentTo ? (
+          <div>
+            <div className="mb-[22px] flex h-[54px] w-[54px] items-center justify-center rounded-[15px] border border-hairline bg-sunken">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-ink" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 6h16v12H4z" />
+                <path d="M4 7l8 6 8-6" />
+              </svg>
+            </div>
+            <h1 className="m-0 mb-3 font-tight text-[30px] font-bold leading-[1.12] tracking-[-.03em] text-ink">
+              Check your inbox
+            </h1>
+            <p className="m-0 mb-[26px] text-[15px] leading-relaxed text-ink-soft">
+              If an account exists for <span className="font-semibold text-ink">{sentTo}</span>, we&apos;ve sent it a reset
+              link. It expires in 1 hour.
             </p>
+            <button
+              type="button"
+              onClick={() => setSentTo(null)}
+              className="inline-flex cursor-pointer items-center gap-[7px] text-sm font-semibold text-accent-500 hover:text-accent-600"
+            >
+              Use a different email
+            </button>
           </div>
-          <Link href="/login" className="btn-primary w-full justify-center py-3 text-base">
+        ) : (
+          <div>
+            <div className="mb-3.5 font-tight text-xs uppercase tracking-[.14em] text-ink-muted">Reset password</div>
+            <h1 className="m-0 mb-3 font-tight text-[32px] font-bold leading-[1.1] tracking-[-.03em] text-ink">
+              Forgot your password?
+            </h1>
+            <p className="m-0 mb-[26px] text-[15px] leading-relaxed text-ink-soft">
+              Enter the email tied to your account and we&apos;ll send a secure reset link.
+            </p>
+
+            <form onSubmit={handleSubmit(submit)} noValidate>
+              <div className="mb-[22px]">
+                <FieldLabel htmlFor="email">Work email</FieldLabel>
+                <input id="email" type="email" {...register("email")} placeholder="maya@lumen.io" autoComplete="email" className={authInput} />
+                <FieldError>{errors.email?.message}</FieldError>
+              </div>
+              <SubmitButton pending={isSubmitting} pendingLabel="Sending…">
+                Send reset link
+              </SubmitButton>
+            </form>
+          </div>
+        )}
+
+        <p className="m-0 mt-7 text-center text-sm text-ink-muted">
+          <Link href="/login" className="font-semibold text-accent-500 hover:text-accent-600">
             ← Back to sign in
           </Link>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-      <div className="w-full max-w-[400px]">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/30">
-            <Mail size={26} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Forgot password?</h1>
-          <p className="mt-1.5 text-sm text-slate-500">Enter your email and we&apos;ll send a reset link</p>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <form onSubmit={handleSubmit(submit)} className="space-y-5">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Email address</label>
-              <input
-                type="email"
-                {...register("email")}
-                placeholder="you@company.com"
-                className="input"
-                autoComplete="email"
-              />
-              {errors.email && <p className="mt-1 text-xs text-red-500">{String(errors.email.message)}</p>}
-            </div>
-
-            <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3 text-base">
-              {isSubmitting ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Sending…
-                </span>
-              ) : "Send reset link"}
-            </button>
-          </form>
-
-          <p className="mt-5 text-center text-sm text-slate-500">
-            <Link href="/login" className="font-semibold text-blue-600 hover:underline">
-              <ArrowLeft size={12} className="inline mb-0.5" /> Back to sign in
-            </Link>
-          </p>
-        </div>
+        </p>
       </div>
-    </main>
+    </AuthShell>
   );
 }

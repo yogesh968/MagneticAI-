@@ -1,10 +1,13 @@
+import crypto from "node:crypto";
 import { Document } from "../models/index.js";
 import { chunkText } from "../utils/chunker.js";
 import { parseDocument } from "../utils/parser.js";
 import { embedText } from "./embedding.service.js";
 import { ensureCollection, qdrant } from "../config/qdrant.js";
 
-export async function processDocument(documentId: string, tenantId: string, path: string, type: string) {
+export type ProcessArgs = { documentId: string; tenantId: string; botId: string; path: string; type: string };
+
+export async function processDocument({ documentId, tenantId, botId, path, type }: ProcessArgs) {
   try {
     await Document.updateOne({ _id: documentId, tenantId }, { status: "processing" });
     const chunks = chunkText(await parseDocument(path, type));
@@ -27,9 +30,10 @@ export async function processDocument(documentId: string, tenantId: string, path
         continue;
       }
 
+      // botId is what rag.service filters on, so every point must carry it.
       await qdrant.upsert(collection, {
         wait: true,
-        points: [{ id: crypto.randomUUID(), vector, payload: { tenantId, documentId, chunkIndex: index, text } }],
+        points: [{ id: crypto.randomUUID(), vector, payload: { tenantId, botId, documentId, chunkIndex: index, text } }],
       });
       indexedCount++;
     }

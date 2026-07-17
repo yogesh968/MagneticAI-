@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { socket } from "@/lib/socket";
+import { connectAsAgent, socket } from "@/lib/socket";
 import { Badge, Loading, Spinner } from "@/components/ui";
 import {
   ArrowLeft, Bot, User, Send, Trash2, UserCheck,
@@ -46,15 +46,16 @@ export default function ConversationDetailPage() {
   useEffect(() => {
     if (!id) return;
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-
-    if (!socket.connected) socket.connect();
-
+    // Identity is established in the handshake now, so join carries no token.
     const onConnect = () => {
       setSocketConnected(true);
-      socket.emit("join:conversation", { conversationId: id, token });
+      socket.emit("join:conversation", { conversationId: id });
     };
     const onDisconnect = () => setSocketConnected(false);
+    const onConnectError = (err: Error) => {
+      setSocketConnected(false);
+      if (err.message === "Unauthorized") toast.error("Live connection rejected — try reloading.");
+    };
     const onNewMessage = (msg: any) => {
       setMessages((prev) => prev.find((m) => m._id === msg._id) ? prev : [...prev, msg]);
       setCustomerTyping(false);
@@ -68,6 +69,7 @@ export default function ConversationDetailPage() {
     const onTypingStop = () => setCustomerTyping(false);
 
     socket.on("connect", onConnect);
+    socket.on("connect_error", onConnectError);
     socket.on("disconnect", onDisconnect);
     socket.on("message:new", onNewMessage);
     socket.on("customer:message", onNewMessage);
@@ -75,15 +77,18 @@ export default function ConversationDetailPage() {
     socket.on("typing:start", onTypingStart);
     socket.on("typing:stop", onTypingStop);
 
-    // If already connected, join immediately
     if (socket.connected) {
       setSocketConnected(true);
-      socket.emit("join:conversation", { conversationId: id, token });
+      socket.emit("join:conversation", { conversationId: id });
+    } else {
+      // Fetches a socket ticket first — the server authenticates the handshake.
+      connectAsAgent().catch(() => toast.error("Could not open live connection."));
     }
 
     return () => {
       socket.emit("leave:conversation", { conversationId: id });
       socket.off("connect", onConnect);
+      socket.off("connect_error", onConnectError);
       socket.off("disconnect", onDisconnect);
       socket.off("message:new", onNewMessage);
       socket.off("customer:message", onNewMessage);
@@ -135,21 +140,21 @@ export default function ConversationDetailPage() {
     <div className="flex h-full flex-col overflow-hidden" style={{ height: "calc(100vh - 64px)" }}>
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 border-b border-slate-200 bg-white px-6 py-4 shrink-0">
+      <div className="flex items-center gap-4 border-b border-hairline bg-white px-6 py-4 shrink-0">
         <button onClick={() => router.back()} className="btn-secondary btn-icon">
           <ArrowLeft size={16} />
         </button>
 
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold text-slate-900 truncate">
+            <h1 className="text-lg font-bold text-ink truncate">
               {c.customerName || "Anonymous"}
             </h1>
             <Badge tone={STATUS_TONE[c.status] ?? "slate"}>{c.status}</Badge>
             {c.isEscalated && <Badge tone="red">Escalated</Badge>}
             {handoffActive && <Badge tone="green">Human active</Badge>}
           </div>
-          <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-400">
+          <div className="flex items-center gap-3 mt-0.5 text-xs text-ink-faint">
             {c.customerEmail && (
               <span className="flex items-center gap-1"><Mail size={11} />{c.customerEmail}</span>
             )}
@@ -161,7 +166,7 @@ export default function ConversationDetailPage() {
         </div>
 
         {/* Socket status */}
-        <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${socketConnected ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+        <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${socketConnected ? "bg-emerald-50 text-emerald-700" : "bg-sunken text-ink-muted"}`}>
           {socketConnected ? <Wifi size={12} /> : <WifiOff size={12} />}
           {socketConnected ? "Connected" : "Offline"}
         </div>
@@ -204,10 +209,10 @@ export default function ConversationDetailPage() {
           )}
 
           {/* Thread */}
-          <div className="flex-1 overflow-y-auto bg-slate-50 px-6 py-5 space-y-4">
+          <div className="flex-1 overflow-y-auto bg-sunken px-6 py-5 space-y-4">
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
-                <p className="text-sm text-slate-400">No messages yet.</p>
+                <p className="text-sm text-ink-faint">No messages yet.</p>
               </div>
             ) : messages.map((m: any, i: number) => {
               const isUser   = m.role === "user";
@@ -224,21 +229,21 @@ export default function ConversationDetailPage() {
                 <div key={m._id ?? i} className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-bold ${
                     isUser
-                      ? "bg-blue-600 text-white"
+                      ? "bg-ink text-white"
                       : isHuman
                         ? "bg-emerald-600 text-white"
-                        : "bg-slate-100 text-slate-600 border border-slate-200"
+                        : "bg-sunken text-ink-muted border border-hairline"
                   }`}>
                     {isUser ? <User size={13} /> : isHuman ? <UserCheck size={13} /> : <Bot size={13} />}
                   </div>
                   <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
-                    <p className="text-[10px] font-semibold text-slate-400 px-1">
+                    <p className="text-[10px] font-semibold text-ink-faint px-1">
                       {isUser ? (c.customerName || "Customer") : isHuman ? "You (Agent)" : "AI Bot"}
                     </p>
                     <div className={isUser ? "bubble-user" : "bubble-bot"}>
                       <p className="whitespace-pre-wrap">{m.content}</p>
                     </div>
-                    <p className={`text-[10px] px-1 ${isUser ? "text-blue-400" : "text-slate-400"}`}>
+                    <p className={`text-[10px] px-1 ${isUser ? "text-ink-faint" : "text-ink-faint"}`}>
                       {m.createdAt ? new Date(m.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : ""}
                     </p>
                   </div>
@@ -249,7 +254,7 @@ export default function ConversationDetailPage() {
             {/* Customer typing */}
             {customerTyping && (
               <div className="flex gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-ink text-white">
                   <User size={13} />
                 </div>
                 <div className="bubble-bot">
@@ -257,7 +262,7 @@ export default function ConversationDetailPage() {
                     {[0, 1, 2].map((i) => (
                       <span
                         key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"
+                        className="w-1.5 h-1.5 rounded-full bg-ink-faint animate-bounce"
                         style={{ animationDelay: `${i * 0.15}s` }}
                       />
                     ))}
@@ -269,9 +274,9 @@ export default function ConversationDetailPage() {
           </div>
 
           {/* Agent input */}
-          <div className={`border-t border-slate-200 bg-white p-4 shrink-0 ${!handoffActive ? "opacity-50 pointer-events-none" : ""}`}>
+          <div className={`border-t border-hairline bg-white p-4 shrink-0 ${!handoffActive ? "opacity-50 pointer-events-none" : ""}`}>
             {!handoffActive && (
-              <p className="text-xs text-center text-slate-400 mb-2">
+              <p className="text-xs text-center text-ink-faint mb-2">
                 Click <strong>&quot;Take over&quot;</strong> to send messages to the customer
               </p>
             )}
@@ -302,48 +307,48 @@ export default function ConversationDetailPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="w-72 shrink-0 border-l border-slate-200 bg-white overflow-y-auto p-5 space-y-5">
+        <div className="w-72 shrink-0 border-l border-hairline bg-white overflow-y-auto p-5 space-y-5">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Customer</p>
+            <p className="label">Customer</p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Name</span>
-                <span className="font-medium text-slate-900 truncate ml-2">{c.customerName || "—"}</span>
+                <span className="text-ink-muted">Name</span>
+                <span className="font-medium text-ink truncate ml-2">{c.customerName || "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Email</span>
-                <span className="font-medium text-slate-900 truncate ml-2 max-w-[140px]">{c.customerEmail || "—"}</span>
+                <span className="text-ink-muted">Email</span>
+                <span className="font-medium text-ink truncate ml-2 max-w-[140px]">{c.customerEmail || "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Messages</span>
-                <span className="font-semibold text-slate-900">{messages.length}</span>
+                <span className="text-ink-muted">Messages</span>
+                <span className="font-semibold text-ink">{messages.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Status</span>
+                <span className="text-ink-muted">Status</span>
                 <Badge tone={STATUS_TONE[c.status] ?? "slate"}>{c.status}</Badge>
               </div>
             </div>
           </div>
 
-          <hr className="border-slate-100" />
+          <hr className="border-hairline" />
 
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Handoff</p>
-            <div className={`rounded-xl border p-3 text-sm ${handoffActive ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"}`}>
+            <p className="label">Handoff</p>
+            <div className={`rounded-xl border p-3 text-sm ${handoffActive ? "border-emerald-200 bg-emerald-50" : "border-hairline bg-sunken"}`}>
               {handoffActive ? (
                 <p className="text-emerald-700 font-semibold flex items-center gap-2">
                   <UserCheck size={14} /> You are live
                 </p>
               ) : (
-                <p className="text-slate-500">AI is handling this conversation.</p>
+                <p className="text-ink-muted">AI is handling this conversation.</p>
               )}
             </div>
           </div>
 
-          <hr className="border-slate-100" />
+          <hr className="border-hairline" />
 
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Quick Replies</p>
+            <p className="label">Quick Replies</p>
             <div className="space-y-2">
               {[
                 "Thanks for reaching out! Let me look into this for you.",
@@ -355,7 +360,7 @@ export default function ConversationDetailPage() {
                   key={qr}
                   onClick={() => { setAgentMsg(qr); }}
                   disabled={!handoffActive}
-                  className="w-full text-left text-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors disabled:opacity-40"
+                  className="w-full text-left text-xs rounded-lg border border-hairline bg-sunken px-3 py-2.5 text-ink-muted hover:border-hairline-strong hover:bg-sunken hover:text-ink transition-colors disabled:opacity-40"
                 >
                   {qr}
                 </button>

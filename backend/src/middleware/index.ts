@@ -1,16 +1,43 @@
 import type { ErrorRequestHandler, NextFunction, Request, Response } from "express";
 import { Types } from "mongoose";
 import { ZodError, type ZodType } from "zod";
-import { verifyAccessToken } from "../utils/jwt.js";
+import { verifyAccessToken, verifySessionToken } from "../utils/jwt.js";
+import { ACCESS_COOKIE } from "../utils/cookies.js";
+import { isProd } from "../config/env.js";
+
+/**
+ * The httpOnly cookie is the dashboard's transport (set via the Next.js rewrite
+ * proxy so it lands on the frontend origin). The Bearer header is kept for
+ * non-browser API clients and the test suite.
+ */
+function readAccessToken(req: Request): string | undefined {
+  return req.cookies?.[ACCESS_COOKIE] ?? req.headers.authorization?.replace(/^Bearer\s+/i, "");
+}
 
 export function verifyJWT(req: Request, res: Response, next: NextFunction) {
   try {
-    const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
+    const token = readAccessToken(req);
     if (!token) return res.status(401).json({ message: "Authentication required" });
     req.user = verifyAccessToken(token);
     next();
   } catch {
     res.status(401).json({ message: "Invalid or expired access token" });
+  }
+}
+
+/**
+ * Public widget auth. Replaces trusting a caller-supplied tenantId in the body:
+ * the tenant is now read from a token this server signed at session creation.
+ */
+export function verifySession(req: Request, res: Response, next: NextFunction) {
+  const raw = req.headers["x-session-token"];
+  const token = Array.isArray(raw) ? raw[0] : raw;
+  if (!token) return res.status(401).json({ message: "Session token required" });
+  try {
+    req.session = verifySessionToken(token);
+    next();
+  } catch {
+    res.status(401).json({ message: "Invalid or expired session token" });
   }
 }
 
@@ -33,6 +60,15 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   if ((error as { code?: string }).code === "LIMIT_FILE_SIZE") return res.status(413).json({ message: "Uploaded file is too large. Maximum size is 10MB." });
   if ((error as { name?: string }).name === "CastError") return res.status(400).json({ message: "Invalid resource identifier" });
   if ((error as { code?: number }).code === 11000) return res.status(409).json({ message: "A resource with that value already exists" });
+  // A bad/expired token is a client error; it used to fall through to a 500 that
+  // echoed the raw jsonwebtoken message back to the caller.
+  const name = (error as { name?: string }).name;
+  if (name === "JsonWebTokenError" || name === "TokenExpiredError" || name === "NotBeforeError") {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
   console.error(error);
-  res.status((error as { status?: number }).status ?? 500).json({ message: (error as Error).message || "Internal server error" });
+  const status = (error as { status?: number }).status ?? 500;
+  // Never leak internal exception text in production.
+  const message = status >= 500 && isProd ? "Internal server error" : (error as Error).message || "Internal server error";
+  res.status(status).json({ message });
 };

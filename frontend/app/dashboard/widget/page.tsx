@@ -1,55 +1,62 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { api } from "@/lib/api";
-import { Loading, PageHeader, Spinner } from "@/components/ui";
+import { useBots } from "@/lib/bots";
+import { BotSelector } from "@/components/BotSelector";
+import { Empty, Loading, PageHeader, Spinner } from "@/components/ui";
 import toast from "react-hot-toast";
-import { Code2, Copy, Check, ExternalLink, Palette, Monitor } from "lucide-react";
+import { Code2, Copy, Check, ExternalLink, Palette, Monitor, Bot as BotIcon, Plus } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 type FormValues = { widgetColor: string; widgetPosition: "bottom-right" | "bottom-left" };
 
 const PRESET_COLORS = [
-  "#2563eb", "#7c3aed", "#059669", "#dc2626",
+  "#0A0A0B", "#7c3aed", "#059669", "#dc2626",
   "#d97706", "#0891b2", "#db2777", "#475569",
 ];
 
-export default function WidgetPage() {
+function WidgetClient() {
+  const { bots, selected, selectBot, reload: reloadBots, loading: botsLoading } = useBots();
   const [loading, setLoading] = useState(true);
-  const [tenantId, setTenantId] = useState("");
   const [copied, setCopied] = useState(false);
   const { register, handleSubmit, watch, setValue, reset, formState: { isSubmitting } } = useForm<FormValues>({
-    defaultValues: { widgetColor: "#2563eb", widgetPosition: "bottom-right" },
+    defaultValues: { widgetColor: "#0A0A0B", widgetPosition: "bottom-right" },
   });
 
   const color    = watch("widgetColor");
   const position = watch("widgetPosition");
+  const botId = selected?._id;
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") ?? "{}");
-    setTenantId(user.tenantId ?? "");
-    api.get("/config/bot")
+    if (!botId) return;
+    setLoading(true);
+    api.get(`/bots/${botId}`)
       .then((r) => {
         reset({
-          widgetColor:    r.data.settings?.widgetColor    ?? "#2563eb",
+          widgetColor:    r.data.settings?.widgetColor    ?? "#0A0A0B",
           widgetPosition: r.data.settings?.widgetPosition ?? "bottom-right",
         });
       })
       .catch(() => toast.error("Failed to load widget config"))
       .finally(() => setLoading(false));
-  }, [reset]);
+  }, [botId, reset]);
 
   const save = async (values: FormValues) => {
+    if (!botId) return;
     try {
-      await api.put("/config/bot", { settings: values });
-      toast.success("Widget settings saved");
+      await api.put(`/bots/${botId}`, { settings: values });
+      toast.success(`Widget settings saved for ${selected?.botName}`);
+      void reloadBots();
     } catch (e: any) {
       toast.error(e.response?.data?.message ?? "Save failed");
     }
   };
 
-  const snippet = `<!-- Magentic AI Widget -->\n<script src="${API_URL}/widget.js" data-tenant-id="${tenantId}"></script>`;
+  // Each bot gets its own embed — data-bot-id is what picks which bot answers.
+  const snippet = `<!-- Magentic AI — ${selected?.botName ?? "Bot"} -->\n<script src="${API_URL}/widget.js" data-bot-id="${botId ?? ""}"></script>`;
 
   const copySnippet = async () => {
     await navigator.clipboard.writeText(snippet);
@@ -58,25 +65,48 @@ export default function WidgetPage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  if (loading) return <div className="p-8"><Loading rows={5} /></div>;
+  if (botsLoading || (loading && selected)) return <div className="p-8"><Loading rows={5} /></div>;
+
+  if (!bots?.length || !selected) {
+    return (
+      <div className="p-7 max-w-3xl mx-auto">
+        <PageHeader title="Widget Settings" subtitle="Embed a bot on any website" />
+        <div className="rounded-2xl border border-hairline bg-white">
+          <Empty
+            title="No bots yet"
+            text="Create a bot to get an embed snippet."
+            icon={<BotIcon size={28} />}
+            action={<Link href="/dashboard/bots" className="btn-primary gap-2"><Plus size={14} /> Create a bot</Link>}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-7 max-w-3xl mx-auto">
-      <PageHeader title="Widget Settings" subtitle="Customize and embed the chat widget on any website" />
+      <PageHeader title="Widget Settings" subtitle="Each bot has its own embed snippet and appearance" />
+
+      {/* Bot scope bar — z-20 so the selector's dropdown paints above the cards below. */}
+      <div className="card anim-up relative z-20 mb-5">
+        <BotSelector bots={bots} selected={selected} onSelect={selectBot} label="Embedding" />
+      </div>
 
       <div className="space-y-5">
         {/* Embed code */}
         <div className="card anim-up">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50">
-              <Code2 size={16} className="text-blue-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sunken">
+              <Code2 size={16} className="text-ink" />
             </div>
             <div>
               <p className="section-title">Embed Code</p>
-              <p className="text-xs text-slate-400 mt-0.5">Paste this before &lt;/body&gt; on your website</p>
+              <p className="text-xs text-ink-faint mt-0.5">
+                Paste before &lt;/body&gt; — this snippet loads <span className="font-semibold text-ink-muted">{selected.botName}</span>
+              </p>
             </div>
           </div>
-          <div className="relative rounded-xl bg-slate-900 p-5 font-mono text-sm text-emerald-400">
+          <div className="relative rounded-xl bg-ink p-5 font-mono text-sm text-emerald-400">
             <pre className="whitespace-pre-wrap break-all">{snippet}</pre>
             <button
               onClick={copySnippet}
@@ -102,8 +132,8 @@ export default function WidgetPage() {
         <form onSubmit={handleSubmit(save)} className="space-y-5">
           <div className="card anim-up d2">
             <div className="flex items-center gap-2.5 mb-5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50">
-                <Palette size={16} className="text-purple-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sunken">
+                <Palette size={16} className="text-ink" />
               </div>
               <p className="section-title">Appearance</p>
             </div>
@@ -119,18 +149,18 @@ export default function WidgetPage() {
                     onClick={() => setValue("widgetColor", c)}
                     style={{ background: c }}
                     className={`h-9 w-9 rounded-xl transition-transform hover:scale-110 ${
-                      color === c ? "ring-2 ring-offset-2 ring-blue-600 scale-110" : ""
+                      color === c ? "ring-2 ring-offset-2 ring-ink scale-110" : ""
                     }`}
                     title={c}
                   />
                 ))}
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center gap-2 rounded-xl border border-hairline bg-sunken px-3 py-2">
                   <input
                     type="color"
                     {...register("widgetColor")}
                     className="h-7 w-7 cursor-pointer rounded border-0 bg-transparent p-0"
                   />
-                  <span className="text-xs font-mono text-slate-600">{color}</span>
+                  <span className="text-xs font-mono text-ink-muted">{color}</span>
                 </div>
               </div>
             </div>
@@ -142,20 +172,20 @@ export default function WidgetPage() {
                 {(["bottom-right", "bottom-left"] as const).map((pos) => (
                   <label
                     key={pos}
-                    className={`flex items-center gap-3 rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                    className={`flex items-center gap-3 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
                       position === pos
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-slate-200 hover:border-slate-300"
+                        ? "border-ink bg-sunken"
+                        : "border-hairline hover:border-hairline-strong"
                     }`}
                   >
                     <input type="radio" {...register("widgetPosition")} value={pos} className="sr-only" />
-                    <div className={`flex h-16 w-24 items-end rounded-lg border-2 ${position === pos ? "border-blue-300 bg-blue-100" : "border-slate-200 bg-slate-50"} p-1.5`}>
+                    <div className={`flex h-16 w-24 items-end rounded-lg border-2 ${position === pos ? "border-hairline-strong bg-sunken" : "border-hairline bg-sunken"} p-1.5`}>
                       <div
                         style={{ background: color }}
                         className={`h-6 w-6 rounded-full ${pos === "bottom-right" ? "ml-auto" : "mr-auto"}`}
                       />
                     </div>
-                    <span className="text-sm font-medium text-slate-700 capitalize">
+                    <span className="text-sm font-medium text-ink-soft capitalize">
                       {pos.replace("-", " ")}
                     </span>
                   </label>
@@ -167,14 +197,14 @@ export default function WidgetPage() {
           {/* Live preview */}
           <div className="card anim-up d3">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100">
-                <Monitor size={16} className="text-slate-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sunken">
+                <Monitor size={16} className="text-ink-muted" />
               </div>
               <p className="section-title">Preview</p>
             </div>
-            <div className="relative h-48 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 overflow-hidden">
+            <div className="relative h-48 rounded-xl bg-gradient-to-br from-sunken to-hairline border border-hairline overflow-hidden">
               <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-xs text-slate-400">Your website</p>
+                <p className="text-xs text-ink-faint">Your website</p>
               </div>
               {/* Simulated widget button */}
               <div
@@ -189,10 +219,19 @@ export default function WidgetPage() {
           </div>
 
           <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3">
-            {isSubmitting ? <><Spinner size={15} /> Saving…</> : "Save widget settings"}
+            {isSubmitting ? <><Spinner size={15} /> Saving…</> : `Save settings for ${selected.botName}`}
           </button>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function WidgetPage() {
+  // useBots reads ?bot= via useSearchParams, which needs a Suspense boundary.
+  return (
+    <Suspense fallback={<div className="p-8"><Loading rows={5} /></div>}>
+      <WidgetClient />
+    </Suspense>
   );
 }

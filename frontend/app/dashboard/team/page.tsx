@@ -5,10 +5,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { UserPlus, Trash2, Shield, ShieldCheck, Eye, EyeOff } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, readSessionHint } from "@/lib/api";
 import { Avatar, Badge, Card, Empty, Loading, PageHeader, Spinner } from "@/components/ui";
 
-const ROLE_TONE: Record<string, string> = { admin: "blue", agent: "green", superadmin: "purple" };
+const ROLE_TONE: Record<string, string> = { admin: "blue", agent: "green", superadmin: "neutral" };
 const ROLE_ICON: Record<string, React.ReactNode> = {
   admin: <ShieldCheck size={12} />,
   agent: <Shield size={12} />,
@@ -38,10 +38,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     load();
-    try {
-      const u = JSON.parse(localStorage.getItem("user") ?? "{}");
-      setCurrentUser(u);
-    } catch {}
+    setCurrentUser(readSessionHint());
   }, []);
 
   const invite = async (values: any) => {
@@ -87,8 +84,8 @@ export default function TeamPage() {
       {showForm && isAdmin && (
         <Card className="mb-5 anim-up">
           <div className="mb-4 flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50">
-              <UserPlus size={15} className="text-blue-600" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sunken">
+              <UserPlus size={15} className="text-ink" />
             </div>
             <p className="section-title">Add team member</p>
           </div>
@@ -96,12 +93,12 @@ export default function TeamPage() {
             <div>
               <label className="label">Full name</label>
               <input {...register("name")} placeholder="Jane Smith" className="input" />
-              {errors.name && <p className="mt-1 text-xs text-red-500">{String(errors.name.message)}</p>}
+              {errors.name && <p className="mt-1 text-xs text-red-600">{String(errors.name.message)}</p>}
             </div>
             <div>
               <label className="label">Email</label>
               <input type="email" {...register("email")} placeholder="jane@company.com" className="input" />
-              {errors.email && <p className="mt-1 text-xs text-red-500">{String(errors.email.message)}</p>}
+              {errors.email && <p className="mt-1 text-xs text-red-600">{String(errors.email.message)}</p>}
             </div>
             <div>
               <label className="label">Temporary password</label>
@@ -112,11 +109,11 @@ export default function TeamPage() {
                   placeholder="Min 8 characters"
                   className="input pr-10"
                 />
-                <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint">
                   {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
-              {errors.password && <p className="mt-1 text-xs text-red-500">{String(errors.password.message)}</p>}
+              {errors.password && <p className="mt-1 text-xs text-red-600">{String(errors.password.message)}</p>}
             </div>
             <div>
               <label className="label">Role</label>
@@ -136,7 +133,7 @@ export default function TeamPage() {
       )}
 
       {/* Members list */}
-      <div className="rounded-2xl bg-white border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0,0,0,0.05)] overflow-hidden">
+      <div className="rounded-2xl bg-white border border-hairline shadow-card overflow-hidden">
         {!members ? (
           <Loading rows={4} />
         ) : members.length === 0 ? (
@@ -146,7 +143,7 @@ export default function TeamPage() {
             icon={<UserPlus size={26} />}
           />
         ) : (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-hairline">
             {members.map((m, i) => {
               const isMe = m._id === currentUser?.id;
               return (
@@ -154,10 +151,10 @@ export default function TeamPage() {
                   <Avatar name={m.name} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-slate-900">{m.name}</p>
-                      {isMe && <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-600">YOU</span>}
+                      <p className="font-semibold text-ink">{m.name}</p>
+                      {isMe && <span className="rounded-full bg-sunken px-2 py-0.5 text-[10px] font-bold text-ink">YOU</span>}
                     </div>
-                    <p className="text-sm text-slate-400 mt-0.5">{m.email}</p>
+                    <p className="text-sm text-ink-faint mt-0.5">{m.email}</p>
                   </div>
                   <Badge tone={ROLE_TONE[m.role] ?? "slate"}>
                     {ROLE_ICON[m.role]}
@@ -167,7 +164,7 @@ export default function TeamPage() {
                     <button
                       onClick={() => remove(m._id, m.name)}
                       disabled={deletingId === m._id}
-                      className="btn-ghost btn-sm p-2 text-slate-300 hover:text-red-500"
+                      className="btn-ghost btn-sm p-2 text-ink-faint hover:text-red-600"
                       title="Remove member"
                     >
                       {deletingId === m._id ? <Spinner size={13} /> : <Trash2 size={14} />}
@@ -188,14 +185,14 @@ export default function TeamPage() {
             { role: "Admin", color: "blue", perms: ["Manage knowledge base", "Configure AI & widget", "View all analytics", "Add / remove team members", "Handle all tickets"] },
             { role: "Agent", color: "green", perms: ["View & update tickets", "Handle conversations", "Human handoff (Socket.io)", "View basic analytics", "No platform config access"] },
           ].map(({ role, color, perms }) => (
-            <div key={role} className={`rounded-xl border p-4 ${color === "blue" ? "border-blue-100 bg-blue-50/40" : "border-green-100 bg-green-50/40"}`}>
+            <div key={role} className={`rounded-xl border p-4 ${color === "blue" ? "border-hairline bg-sunken/40" : "border-green-100 bg-green-50/40"}`}>
               <div className="mb-3 flex items-center gap-2">
                 <Badge tone={color}>{role}</Badge>
               </div>
               <ul className="space-y-1.5">
                 {perms.map((p) => (
-                  <li key={p} className="flex items-center gap-2 text-xs text-slate-700">
-                    <span className={`h-1.5 w-1.5 rounded-full ${color === "blue" ? "bg-blue-500" : "bg-green-500"}`} />
+                  <li key={p} className="flex items-center gap-2 text-xs text-ink-soft">
+                    <span className={`h-1.5 w-1.5 rounded-full ${color === "blue" ? "bg-accent-500" : "bg-green-500"}`} />
                     {p}
                   </li>
                 ))}

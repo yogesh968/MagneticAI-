@@ -9,6 +9,22 @@ export const qdrant = new QdrantClient({
 
 export const collectionName = (tenantId: string) => `kb_${tenantId}`;
 
+/**
+ * Qdrant Cloud refuses to filter on an unindexed payload key — the search comes
+ * back "Index required but not found". Self-hosted allows it, which is why the
+ * botId filter in rag.service only breaks against Cloud. Safe to re-run: an
+ * existing index is a no-op.
+ */
+async function ensurePayloadIndexes(name: string) {
+  for (const field of ["botId", "documentId"] as const) {
+    try {
+      await qdrant.createPayloadIndex(name, { field_name: field, field_schema: "keyword", wait: true });
+    } catch (err: any) {
+      console.warn(`[qdrant] could not create payload index ${name}.${field}:`, err?.message ?? err);
+    }
+  }
+}
+
 function getVectorSize(vectors: unknown): number | undefined {
   if (!vectors || typeof vectors !== "object") return undefined;
   if ("size" in vectors && typeof vectors.size === "number") return vectors.size;
@@ -36,6 +52,7 @@ export async function ensureCollection(tenantId: string) {
     // Collection does not exist — create it
     await qdrant.createCollection(name, { vectors: { size: VECTOR_SIZE, distance: "Cosine" } });
   }
+  await ensurePayloadIndexes(name);
   return name;
 }
 
@@ -48,5 +65,6 @@ export async function recreateCollection(tenantId: string) {
   await qdrant.createCollection(name, {
     vectors: { size: VECTOR_SIZE, distance: "Cosine" },
   });
+  await ensurePayloadIndexes(name);
   return name;
 }

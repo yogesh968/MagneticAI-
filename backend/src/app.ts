@@ -4,15 +4,16 @@ import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import type { NextFunction, Request, Response } from "express";
-import cors from "cors";
+import cookieParser from "cookie-parser";
 import express from "express";
 import helmetPkg from "helmet";
 import { connectDB } from "./config/db.js";
+import { dashboardCors, publicCors } from "./config/cors.js";
 import { errorHandler } from "./middleware/index.js";
 import { analyticsRouter } from "./routes/analytics.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
+import { botRouter, widgetRouter } from "./routes/bot.routes.js";
 import { chatRouter } from "./routes/chat.routes.js";
-import { configRouter, widgetRouter } from "./routes/config.routes.js";
 import { conversationRouter } from "./routes/conversation.routes.js";
 import { integrationRouter } from "./routes/integration.routes.js";
 import { kbRouter } from "./routes/kb.routes.js";
@@ -23,22 +24,16 @@ import { uploadDir } from "./utils/upload-path.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
 
-const corsOptions: cors.CorsOptions = {
-  origin: "*",
-  credentials: false,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-razorpay-signature"],
-  optionsSuccessStatus: 200,
-};
-
 export const app = express();
 
-// CORS + preflight MUST be first — before helmet, routes, rate limiters
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+// Vercel/Railway terminate TLS upstream. Without this, req.ip is the proxy's
+// address and every rate limiter buckets the whole world into one key.
+app.set("trust proxy", 1);
+
 app.use((helmetPkg as any)({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(express.json({ limit: "1mb", verify: (req: any, res, buf) => { req.rawBody = buf; } })); // Added rawBody for webhook
-app.use(express.urlencoded({ extended: true, limit: "1mb" })); // Twilio sends form-encoded webhooks
+app.use(express.json({ limit: "1mb", verify: (req: any, _res, buf) => { req.rawBody = buf; } })); // rawBody for webhook signature checks
+app.use(express.urlencoded({ extended: true, limit: "1mb", verify: (req: any, _res, buf) => { req.rawBody = buf; } })); // Twilio sends form-encoded webhooks
+app.use(cookieParser());
 
 app.get("/", (_req, res) => res.json({ status: "ok", service: "Magnetic AI API" }));
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
@@ -64,16 +59,22 @@ app.use("/api", async (_req: Request, _res: Response, next: NextFunction) => {
   }
 });
 
-app.use("/api/auth", authRouter);
-app.use("/api/kb", kbRouter);
-app.use("/api/chat", chatRouter);
-app.use("/api/tickets", ticketRouter);
-app.use("/api/conversations", conversationRouter);
-app.use("/api/analytics", analyticsRouter);
-app.use("/api/config", configRouter);
-app.use("/api/widget", widgetRouter);
+// Public surface — embeddable widget and third-party webhooks. Any origin.
+app.use("/api/chat", publicCors, chatRouter);
+app.use("/api/widget", publicCors, widgetRouter);
+app.use("/api/payment", publicCors, paymentRouter);
+// Not mounted with publicCors: this router mixes public webhooks with one
+// credentialed dashboard route, so each route picks its own policy. A mount-level
+// publicCors would answer the /status preflight with `*` and no credentials.
 app.use("/api/integrations", integrationRouter);
-app.use("/api/payment", paymentRouter);
+
+// Dashboard surface — credentialed, allowlisted origins only.
+app.use("/api/auth", dashboardCors, authRouter);
+app.use("/api/kb", dashboardCors, kbRouter);
+app.use("/api/tickets", dashboardCors, ticketRouter);
+app.use("/api/conversations", dashboardCors, conversationRouter);
+app.use("/api/analytics", dashboardCors, analyticsRouter);
+app.use("/api/bots", dashboardCors, botRouter);
 app.use(errorHandler);
 
 let initPromise: Promise<void> | undefined;
