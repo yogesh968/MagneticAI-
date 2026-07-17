@@ -71,7 +71,7 @@ async function loadSessionConversation(req: Request) {
  * Only user/assistant turns: system notes and agent handoff chatter would read
  * as instructions to the model.
  */
-async function loadHistory(tenantId: string, conversationId: any): Promise<RagHistory> {
+async function loadHistory(tenantId: string, conversationId: unknown): Promise<RagHistory> {
   const recent = await Message.find({
     tenantId,
     conversationId,
@@ -80,7 +80,7 @@ async function loadHistory(tenantId: string, conversationId: any): Promise<RagHi
     .sort({ createdAt: -1 })
     .limit(HISTORY_TURNS)
     .select("role content")
-    .lean<any[]>();
+    .lean<Array<{ role: string; content: string }>>();
 
   return recent
     .reverse()
