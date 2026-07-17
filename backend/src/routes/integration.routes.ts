@@ -70,11 +70,11 @@ const whatsappHandler = async (req: any, res: any) => {
     const body    = req.body as Record<string, string>;
     const from    = body["From"]    ?? "";   // whatsapp:+1234567890
     const msgBody = body["Body"]    ?? "";
-    const to      = body["To"]      ?? "";   // whatsapp:+<your twilio number>
 
     // NOTE: single-tenant. Every inbound WhatsApp message is attributed to
-    // WHATSAPP_TENANT_ID regardless of which number it arrived on, so this
-    // integration cannot serve more than one tenant as written.
+    // WHATSAPP_TENANT_ID regardless of which number it arrived on — body["To"]
+    // is deliberately ignored — so this integration cannot serve more than one
+    // tenant as written.
     const tenantId = env.WHATSAPP_TENANT_ID ?? "";
     if (!tenantId) {
       console.warn("[whatsapp] WHATSAPP_TENANT_ID not set — rejecting");

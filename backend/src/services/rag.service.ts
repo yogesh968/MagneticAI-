@@ -29,6 +29,9 @@ export type RagHistory = ChatMessage[];
  */
 export const HISTORY_TURNS = 6;
 
+/** Message off an unknown thrown value, without asserting it is an Error. */
+const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
 /**
  * The exact sentence the model is told to use when the KB does not cover the
  * question. Also the marker for "this answer cites nothing" — retrieval can
@@ -102,8 +105,8 @@ async function condenseQuery(history: RagHistory, query: string): Promise<string
     const clean = String(rewritten ?? "").trim().replace(/^["']|["']$/g, "");
     // A rewrite that returns an essay has misunderstood the job; ignore it.
     return clean && clean.length < 200 ? clean : query;
-  } catch (err: any) {
-    console.error("[rag] Query condensation failed, searching with the raw query:", err?.message ?? err);
+  } catch (err) {
+    console.error("[rag] Query condensation failed, searching with the raw query:", errText(err));
     return query;
   }
 }
@@ -188,10 +191,10 @@ WHAT YOU KNOW
         if (revector) hits = await search(revector);
       }
     }
-  } catch (err: any) {
+  } catch (err) {
     // Swallowing this silently makes a broken search indistinguishable from an
     // empty KB — the bot just claims it knows nothing. Answer anyway, but log.
-    console.error("[rag] KB search failed, answering without context:", err?.message ?? err);
+    console.error("[rag] KB search failed, answering without context:", errText(err));
     hits = [];
   }
 
@@ -215,7 +218,7 @@ WHAT YOU KNOW
   // its own "Sources:" line just invites it to cite documents it never used.
   const docs = await Document.find({ _id: { $in: documentsReferenced }, tenantId: target.tenantId })
     .select("name")
-    .lean<any[]>();
+    .lean<Array<{ name?: string }>>();
   const sources = docs.map((d) => String(d.name)).filter(Boolean);
 
   const system = `You are ${botName}, a ${personality} customer support assistant for ${bizName}.

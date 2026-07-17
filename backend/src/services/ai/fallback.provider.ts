@@ -7,7 +7,9 @@ export class FallbackProvider implements AIProvider {
   // Default to a cheap but very fast & capable model on OpenRouter
   private defaultModel = process.env.FALLBACK_AI_MODEL || "openai/gpt-4o-mini";
 
-  async chat(messages: ChatMessage[], attempt = 0): Promise<string> {
+  // `_attempt` is required by AIProvider — this provider is the fallback and has
+  // nothing further to fall back to, so it never retries.
+  async chat(messages: ChatMessage[], _attempt = 0): Promise<string> {
     if (!this.apiKey) {
       throw new Error("Fallback provider called but FALLBACK_AI_API_KEY is not configured.");
     }
@@ -36,7 +38,7 @@ export class FallbackProvider implements AIProvider {
     return data.choices?.[0]?.message?.content ?? "I'm here to help! Could you please rephrase your question?";
   }
 
-  async streamChat(messages: ChatMessage[], attempt = 0): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>> {
+  async streamChat(messages: ChatMessage[], _attempt = 0): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>> {
     if (!this.apiKey) {
       throw new Error("Fallback provider called but FALLBACK_AI_API_KEY is not configured.");
     }
@@ -91,7 +93,7 @@ export class FallbackProvider implements AIProvider {
                   try {
                     const data = JSON.parse(dataStr);
                     return { done: false, value: data };
-                  } catch (e) {
+                  } catch {
                     // Ignore parse errors on partial chunks
                   }
                 }
