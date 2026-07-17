@@ -13,7 +13,7 @@ function StatusBadge({ ok }: { ok: boolean }) {
       <CheckCircle2 size={12} /> Configured
     </span>
   ) : (
-    <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200/60">
+    <span className="flex items-center gap-1.5 rounded-full bg-sunken px-3 py-1 text-xs font-semibold text-ink-muted ring-1 ring-hairline">
       <XCircle size={12} /> Not configured
     </span>
   );
@@ -31,7 +31,7 @@ function CopyField({ value, label }: { value: string; label: string }) {
     <div>
       <label className="label">{label}</label>
       <div className="flex items-center gap-2">
-        <div className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 font-mono text-sm text-slate-700 truncate">
+        <div className="flex-1 rounded-xl border border-hairline bg-sunken px-4 py-2.5 font-mono text-sm text-ink-soft truncate">
           {value}
         </div>
         <button onClick={copy} className="btn-secondary px-3 py-2.5 shrink-0">
@@ -85,7 +85,7 @@ export default function IntegrationsPage() {
       <PageHeader title="Integrations" subtitle="Connect WhatsApp and email to your AI support platform" />
 
       {loading ? (
-        <div className="flex justify-center py-20"><Spinner size={24} className="text-blue-600" /></div>
+        <div className="flex justify-center py-20"><Spinner size={24} className="text-ink" /></div>
       ) : (
         <div className="space-y-5">
 
@@ -97,22 +97,22 @@ export default function IntegrationsPage() {
                   <MessageCircle size={22} className="text-[#25D366]" />
                 </div>
                 <div>
-                  <p className="text-base font-bold text-slate-900">WhatsApp</p>
-                  <p className="text-xs text-slate-400 mt-0.5">AI replies to WhatsApp messages via Twilio</p>
+                  <p className="text-base font-bold text-ink">WhatsApp</p>
+                  <p className="text-xs text-ink-faint mt-0.5">AI replies to WhatsApp messages via Twilio</p>
                 </div>
               </div>
               <StatusBadge ok={status?.twilio} />
             </div>
 
-            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 mb-5">
+            <div className="rounded-xl border border-hairline bg-sunken/50 p-4 mb-5">
               <div className="flex gap-2">
-                <Info size={15} className="text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-800 space-y-1">
+                <Info size={15} className="text-ink shrink-0 mt-0.5" />
+                <div className="text-xs text-ink-soft space-y-1">
                   <p className="font-semibold">Setup steps:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-blue-700">
+                  <ol className="list-decimal list-inside space-y-1 text-ink-soft">
                     <li>Create a <a href="https://www.twilio.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">Twilio account</a> and activate the WhatsApp sandbox</li>
-                    <li>Add these env vars to your backend <code className="bg-blue-100 px-1 rounded">.env</code>:
-                      <br /><code className="bg-blue-100 px-1 rounded">TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, WHATSAPP_TENANT_ID</code>
+                    <li>Add these env vars to your backend <code className="bg-sunken px-1 rounded">.env</code>:
+                      <br /><code className="bg-sunken px-1 rounded">TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, WHATSAPP_TENANT_ID</code>
                     </li>
                     <li>In Twilio Console → WhatsApp Sandbox → &quot;When a message comes in&quot;, paste the webhook URL below</li>
                     <li>Set HTTP method to <strong>POST</strong></li>
@@ -124,13 +124,13 @@ export default function IntegrationsPage() {
             <CopyField value={whatsappWebhook} label="Twilio Webhook URL" />
 
             <div className="mt-4 grid grid-cols-2 gap-4 text-xs">
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                <p className="font-semibold text-slate-700 mb-1">Env variable</p>
-                <code className="text-slate-600">TWILIO_ACCOUNT_SID=ACxxxxxxx</code>
+              <div className="rounded-xl bg-sunken border border-hairline p-3">
+                <p className="font-semibold text-ink-soft mb-1">Env variable</p>
+                <code className="text-ink-muted">TWILIO_ACCOUNT_SID=ACxxxxxxx</code>
               </div>
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                <p className="font-semibold text-slate-700 mb-1">Env variable</p>
-                <code className="text-slate-600">WHATSAPP_TENANT_ID={tenantId || "<your-tenant-id>"}</code>
+              <div className="rounded-xl bg-sunken border border-hairline p-3">
+                <p className="font-semibold text-ink-soft mb-1">Env variable</p>
+                <code className="text-ink-muted">WHATSAPP_TENANT_ID={tenantId || "<your-tenant-id>"}</code>
               </div>
             </div>
 
@@ -148,23 +148,23 @@ export default function IntegrationsPage() {
           <div className="card anim-up d2">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 ring-1 ring-blue-200/60">
-                  <Mail size={22} className="text-blue-600" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sunken ring-1 ring-hairline">
+                  <Mail size={22} className="text-ink" />
                 </div>
                 <div>
-                  <p className="text-base font-bold text-slate-900">Email → Ticket</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Incoming emails auto-create support tickets</p>
+                  <p className="text-base font-bold text-ink">Email → Ticket</p>
+                  <p className="text-xs text-ink-faint mt-0.5">Incoming emails auto-create support tickets</p>
                 </div>
               </div>
               <StatusBadge ok={status?.email} />
             </div>
 
-            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 mb-5">
+            <div className="rounded-xl border border-hairline bg-sunken/50 p-4 mb-5">
               <div className="flex gap-2">
-                <Info size={15} className="text-blue-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-800 space-y-1">
+                <Info size={15} className="text-ink shrink-0 mt-0.5" />
+                <div className="text-xs text-ink-soft space-y-1">
                   <p className="font-semibold">Two ways to use:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-blue-700">
+                  <ol className="list-decimal list-inside space-y-1 text-ink-soft">
                     <li><strong>SendGrid Inbound Parse</strong> — set the webhook URL below in your SendGrid dashboard</li>
                     <li><strong>Direct API call</strong> — POST to the URL from any email relay (Postmark, Mailgun, etc.)</li>
                   </ol>
@@ -174,8 +174,8 @@ export default function IntegrationsPage() {
 
             <CopyField value={emailWebhook} label="Email Webhook URL" />
 
-            <div className="mt-4 rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs font-mono text-slate-600">
-              <p className="font-sans font-semibold text-slate-700 mb-2">Expected POST body (JSON):</p>
+            <div className="mt-4 rounded-xl bg-sunken border border-hairline p-4 text-xs font-mono text-ink-muted">
+              <p className="font-sans font-semibold text-ink-soft mb-2">Expected POST body (JSON):</p>
               <pre>{`{
   "tenantId": "${tenantId || "<tenant-id>"}",
   "from": "customer@example.com",
@@ -186,8 +186,8 @@ export default function IntegrationsPage() {
             </div>
 
             {/* Test form */}
-            <div className="mt-5 border-t border-slate-100 pt-5">
-              <p className="text-sm font-semibold text-slate-700 mb-3">Test email integration</p>
+            <div className="mt-5 border-t border-hairline pt-5">
+              <p className="text-sm font-semibold text-ink-soft mb-3">Test email integration</p>
               <div className="space-y-3">
                 <input
                   className="input"
@@ -222,7 +222,7 @@ export default function IntegrationsPage() {
           {/* ── Multi-tenant info ── */}
           <div className="card anim-up d3 border-dashed">
             <p className="section-title mb-3">Your Tenant ID</p>
-            <p className="text-xs text-slate-400 mb-3">
+            <p className="text-xs text-ink-faint mb-3">
               Use this ID to route webhooks to your account. Each business on the platform has its own isolated tenant ID.
             </p>
             <CopyField value={tenantId || "Loading…"} label="Tenant ID" />

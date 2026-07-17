@@ -1,16 +1,16 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import toast from "react-hot-toast";
-import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import toast from "react-hot-toast";
+import { z } from "zod";
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { FieldError, FieldLabel, SubmitButton } from "@/components/auth/fields";
-import { authInput } from "@/components/auth/shared";
+import { authInput, safeNext } from "@/components/auth/shared";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -19,15 +19,9 @@ const schema = z.object({
 
 type Values = z.infer<typeof schema>;
 
-const CAPABILITIES = [
-  { title: "Tenant Management", desc: "Onboard & manage all tenants" },
-  { title: "User Directory", desc: "Full user access control" },
-  { title: "Platform Stats", desc: "Real-time system metrics" },
-  { title: "System Health", desc: "API & service monitoring" },
-];
-
-export default function AdminLoginPage() {
+export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [showPwd, setShowPwd] = useState(false);
   const {
     register,
@@ -38,57 +32,42 @@ export default function AdminLoginPage() {
   const submit = async (values: Values) => {
     try {
       const { data } = await api.post("/auth/login", values);
-      if (!data.user) {
-        toast.error("Login failed");
-        return;
-      }
-      const role = data.user.role;
-      // The credentials were valid and the server has already issued the session
-      // cookie, so this is not a denial — it is just the wrong door. Send them to
-      // the dashboard rather than claiming access was refused.
-      if (role !== "superadmin") {
-        toast("Signed in — this portal is superadmin-only, taking you to your dashboard.");
-        router.replace("/dashboard");
-        router.refresh();
-        return;
-      }
-      toast.success(`Welcome, ${data.user.name ?? "Admin"}!`);
-      router.replace("/admin");
+      toast.success("Welcome back!");
+      const dest = safeNext(searchParams.get("next")) ?? (data.user?.role === "superadmin" ? "/admin" : "/dashboard");
+      router.replace(dest);
       router.refresh();
     } catch (e: any) {
-      toast.error(e.response?.data?.message ?? "Invalid credentials");
+      toast.error(e.response?.data?.message ?? "Something went wrong");
     }
   };
 
   return (
     <AuthShell
-      eyebrow="Admin portal"
-      headline="Supercharged admin control."
-      blurb={
-        <div className="grid max-w-[420px] grid-cols-2 gap-3">
-          {CAPABILITIES.map(({ title, desc }) => (
-            <div key={title} className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="m-0 text-sm font-semibold text-white">{title}</p>
-              <p className="m-0 mt-0.5 text-xs text-[#8A8A8F]">{desc}</p>
-            </div>
-          ))}
-        </div>
+      eyebrow="AI Customer Support"
+      headline={
+        <>
+          Answers on autopilot.
+          <br />
+          Humans when it matters.
+        </>
       }
-      footnotes={["SUPERADMIN ONLY", "RESTRICTED ACCESS"]}
+      blurb={
+        <p className="m-0 max-w-[400px] text-base leading-relaxed text-[#A1A1AA]">
+          Sign in to your Magnetic workspace to manage conversations, tickets, and your knowledge base.
+        </p>
+      }
+      footnotes={["SOC 2 TYPE II", "GDPR", "CCPA"]}
     >
       <div className="w-full max-w-[390px]">
-        <div className="mb-3.5 font-tight text-xs uppercase tracking-[.14em] text-[#71717A]">Restricted access</div>
-        <h1 className="m-0 mb-3 font-tight text-[34px] font-bold leading-[1.1] tracking-[-.03em] text-ink">
-          Admin sign in
+        <div className="eyebrow mb-3.5">Welcome back</div>
+        <h1 className="m-0 mb-[30px] font-tight text-[34px] font-bold leading-[1.1] tracking-[-.03em] text-ink">
+          Sign in to Magnetic
         </h1>
-        <p className="m-0 mb-[30px] text-[15px] leading-relaxed text-ink-soft">
-          Sign in with your admin credentials to access the portal.
-        </p>
 
         <form onSubmit={handleSubmit(submit)} noValidate>
           <div className="mb-[18px]">
-            <FieldLabel htmlFor="email">Email address</FieldLabel>
-            <input id="email" type="email" {...register("email")} placeholder="admin@company.com" autoComplete="email" className={authInput} />
+            <FieldLabel htmlFor="email">Work email</FieldLabel>
+            <input id="email" type="email" {...register("email")} placeholder="maya@lumen.io" autoComplete="email" className={authInput} />
             <FieldError>{errors.email?.message}</FieldError>
           </div>
 
@@ -123,14 +102,19 @@ export default function AdminLoginPage() {
           </div>
 
           <SubmitButton pending={isSubmitting} pendingLabel="Signing in…">
-            Sign in to Admin Portal
+            Sign in
           </SubmitButton>
         </form>
 
         <p className="m-0 mt-[26px] text-center text-sm text-ink-muted">
-          Not an admin?{" "}
-          <Link href="/login" className="font-semibold text-accent-500 hover:text-accent-600">
-            Go to agent login →
+          New to Magnetic?{" "}
+          <Link href="/register" className="font-semibold text-accent-500 hover:text-accent-600">
+            Create an account →
+          </Link>
+        </p>
+        <p className="m-0 mt-4 text-center">
+          <Link href="/admin/login" className="text-xs text-ink-faint transition-colors hover:text-ink">
+            Admin portal →
           </Link>
         </p>
       </div>

@@ -5,7 +5,19 @@ import { Avatar, Badge, Empty, Loading, PageHeader } from "@/components/ui";
 import { Users, Search, Shield, ShieldCheck, UserX } from "lucide-react";
 import toast from "react-hot-toast";
 
-const ROLE_TONE: Record<string, string> = { admin: "blue", agent: "green", superadmin: "purple" };
+const ROLE_TONE: Record<string, string> = { admin: "blue", agent: "green", superadmin: "neutral" };
+
+/**
+ * Tailwind scans source statically, so a class built as `bg-${color}-50` is
+ * never generated and the element renders unstyled. Every tone the summary
+ * chips can take has to appear here as a whole, literal class name.
+ */
+const CHIP_TONE: Record<string, string> = {
+  slate: "bg-sunken border-hairline text-ink-soft",
+  blue: "bg-accent-50 border-accent-100 text-accent-700",
+  green: "bg-emerald-50 border-emerald-100 text-emerald-700",
+  neutral: "bg-sunken border-hairline text-ink-soft",
+};
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<any[] | null>(null);
@@ -52,7 +64,7 @@ export default function AdminUsersPage() {
       {/* Filter bar */}
       <div className="filter-bar mb-5">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" />
           <input
             className="input pl-9 py-2"
             placeholder="Search name or email…"
@@ -65,8 +77,8 @@ export default function AdminUsersPage() {
           <button
             key={r}
             onClick={() => setRoleFilter(r)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-              roleFilter === r ? "bg-violet-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-100"
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              roleFilter === r ? "bg-ink text-white shadow-xs" : "text-ink-muted hover:bg-sunken"
             }`}
           >
             {r === "" ? "All" : r}
@@ -74,7 +86,7 @@ export default function AdminUsersPage() {
         ))}
       </div>
 
-      <div className="rounded-2xl bg-white border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0,0,0,0.04)] overflow-hidden anim-up d2">
+      <div className="card p-0 overflow-hidden anim-up d2">
         {!users ? (
           <Loading rows={6} />
         ) : filtered.length === 0 ? (
@@ -104,12 +116,12 @@ export default function AdminUsersPage() {
                         <div className="flex items-center gap-3">
                           <Avatar name={u.name} size="sm" />
                           <div>
-                            <p className="font-semibold text-slate-900">{u.name}</p>
-                            {isMe && <span className="text-[10px] font-bold text-blue-600">YOU</span>}
+                            <p className="font-semibold text-ink">{u.name}</p>
+                            {isMe && <span className="text-[10px] font-bold text-ink">YOU</span>}
                           </div>
                         </div>
                       </td>
-                      <td className="text-sm text-slate-600">{u.email}</td>
+                      <td className="text-sm text-ink-soft">{u.email}</td>
                       <td>
                         <Badge tone={ROLE_TONE[u.role] ?? "slate"}>
                           {u.role === "admin" ? <ShieldCheck size={11} /> : u.role === "superadmin" ? <ShieldCheck size={11} /> : <Shield size={11} />}
@@ -117,7 +129,7 @@ export default function AdminUsersPage() {
                         </Badge>
                       </td>
                       <td>
-                        <span className="font-mono text-xs text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg">
+                        <span className="font-mono text-xs text-ink-faint bg-sunken border border-hairline px-2 py-1 rounded-lg">
                           {String(u.tenantId ?? "—").slice(0, 16)}…
                         </span>
                       </td>
@@ -126,7 +138,7 @@ export default function AdminUsersPage() {
                           <button
                             onClick={() => remove(u._id, u.name)}
                             disabled={deletingId === u._id}
-                            className="btn-ghost btn-sm p-2 text-slate-300 hover:text-red-500"
+                            className="btn-ghost btn-sm p-2 text-ink-faint hover:text-red-500"
                             title="Remove user"
                           >
                             {deletingId === u._id ? (
@@ -150,12 +162,12 @@ export default function AdminUsersPage() {
       {users && (
         <div className="mt-4 flex gap-3 flex-wrap anim-up d3">
           {[
-            { label: "Total", value: users.length, color: "slate" },
-            { label: "Admins", value: users.filter((u: any) => u.role === "admin").length, color: "blue" },
-            { label: "Agents", value: users.filter((u: any) => u.role === "agent").length, color: "green" },
-            { label: "Superadmins", value: users.filter((u: any) => u.role === "superadmin").length, color: "purple" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className={`rounded-xl border px-4 py-2.5 text-sm font-semibold bg-${color}-50 border-${color}-100 text-${color}-700`}>
+            { label: "Total", value: users.length, tone: "slate" },
+            { label: "Admins", value: users.filter((u: any) => u.role === "admin").length, tone: "blue" },
+            { label: "Agents", value: users.filter((u: any) => u.role === "agent").length, tone: "green" },
+            { label: "Superadmins", value: users.filter((u: any) => u.role === "superadmin").length, tone: "neutral" },
+          ].map(({ label, value, tone }) => (
+            <div key={label} className={`rounded-xl border px-4 py-2.5 text-sm font-semibold ${CHIP_TONE[tone] ?? CHIP_TONE.slate}`}>
               {value} {label}
             </div>
           ))}

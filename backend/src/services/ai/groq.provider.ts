@@ -13,7 +13,7 @@ export class GroqProvider implements AIProvider {
     try {
       const res = await groq.chat.completions.create({
         model,
-        max_tokens: 1024,
+        max_tokens: 400,
         temperature: 0.3,
         stream: false,
         messages,
@@ -35,7 +35,7 @@ export class GroqProvider implements AIProvider {
     try {
       return await groq.chat.completions.create({
         model,
-        max_tokens: 1024,
+        max_tokens: 400,
         temperature: 0.3,
         stream: true,
         messages,

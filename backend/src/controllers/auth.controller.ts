@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
+import { appUrl } from "../config/env.js";
 import { Bot, Tenant, User } from "../models/index.js";
 import { signAccessToken, signRefreshToken, signSocketTicket, verifyRefreshToken } from "../utils/jwt.js";
 import { REFRESH_COOKIE, clearAuthCookies, setAuthCookies, setSessionHint } from "../utils/cookies.js";
@@ -51,7 +52,8 @@ export async function login(req: Request, res: Response) {
 }
 
 async function sendResetEmail(email: string, token: string) {
-  const link = `${process.env.FRONTEND_URL ?? "http://localhost:3000"}/reset-password?token=${token}`;
+  // appUrl, not FRONTEND_URL: the latter may list several origins.
+  const link = `${appUrl}/reset-password?token=${token}`;
   // Use SMTP if configured (SMTP_HOST + SMTP_USER + SMTP_PASS), otherwise log to console
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const nodemailer = await import("nodemailer");

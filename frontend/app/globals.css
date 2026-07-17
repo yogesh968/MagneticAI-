@@ -2,125 +2,174 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
+/* Fonts are loaded by next/font in app/layout.tsx, not @import here.
+   An @import after a style rule is invalid CSS and browsers drop it silently —
+   which is exactly how Inter went missing for every screen. */
 
-:root { --brand: #2563eb; }
+/* ── Design tokens ───────────────────────────────────────────────────────────
+   Warm ivory canvas + ink, with one electric accent that carries every
+   affordance (primary action, active nav, focus, links). Colour means
+   something here: if it is blue you can click it, if it is amber or red it
+   needs a human. Everything else is ink and hairline. */
+:root {
+  --canvas:   #FBFAF8;  /* page background — warm, not #FAFAFA cool grey */
+  --surface:  #FFFFFF;  /* cards */
+  --sunken:   #F5F3EF;  /* table headers, wells */
+  --ink:      #0A0A0B;  /* headings, primary text */
+  --ink-soft: #2A2A2E;  /* body */
+  --muted:    #6B6B70;  /* secondary */
+  --faint:    #9A9AA0; /* tertiary */
+  --hairline: #E8E6E1;  /* warm border */
+  --hairline-strong: #D9D6CF;
+
+  --accent:      #2F6BFF;
+  --accent-hover:#1E55E0;
+  --accent-soft: #EEF3FF;
+  --accent-ring: rgba(47, 107, 255, .18);
+
+  --success: #0F9D63;
+  --success-soft: #E6F6EE;
+  --warn:    #F59E0B;
+  --warn-soft: #FCF3E3;
+  --danger:  #DC2626;
+  --danger-soft: #FDECEC;
+}
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #f0f2f5;
-  color: #0f172a;
+  font-family: var(--font-inter), Inter, system-ui, -apple-system, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+h1, h2, h3 { font-family: var(--font-inter-tight), Inter, system-ui, sans-serif; }
+::selection { background: var(--accent); color: #fff; }
 
 @layer components {
   /* ── Cards ─────────────────────────────────────────────────────────── */
   .card {
-    @apply rounded-2xl border border-slate-200/70 bg-white p-5
-    shadow-[0_1px_4px_0_rgb(0,0,0,0.05),0_0_0_1px_rgb(0,0,0,0.02)];
+    @apply rounded-2xl border border-[--hairline] bg-[--surface] p-5;
   }
   .card-hover {
-    @apply card transition-all duration-200
-    hover:shadow-[0_4px_16px_0_rgb(0,0,0,0.08),0_0_0_1px_rgb(0,0,0,0.04)]
-    hover:-translate-y-0.5;
+    @apply card transition-[border-color,box-shadow] duration-150
+    hover:border-[--hairline-strong] hover:shadow-[0_10px_28px_-20px_rgba(20,20,25,.45)];
   }
 
   /* ── Typography ────────────────────────────────────────────────────── */
-  .page-title   { @apply text-[22px] font-bold tracking-tight text-slate-900 leading-tight; }
-  .page-sub     { @apply mt-1 text-sm text-slate-500 leading-relaxed; }
-  .section-title { @apply text-sm font-semibold text-slate-900 leading-tight; }
-  .label        { @apply mb-1.5 block text-sm font-medium text-slate-700; }
-  .hint         { @apply mt-1.5 text-xs text-slate-400; }
+  .page-title    { @apply font-tight text-[27px] font-bold tracking-[-.025em] text-[--ink] leading-[1.15]; }
+  .page-sub      { @apply mt-1.5 text-sm text-[--muted] leading-relaxed; }
+  .section-title { @apply font-tight text-[17px] font-semibold tracking-[-.01em] text-[--ink] leading-tight; }
+  .label         { @apply mb-2 block font-tight text-[11px] font-semibold uppercase tracking-[.1em] text-[--muted]; }
+  .hint          { @apply mt-1.5 text-xs text-[--muted]; }
+  .eyebrow       { @apply mb-2.5 font-tight text-[11.5px] font-semibold uppercase tracking-[.16em] text-[--accent]; }
 
   /* ── Inputs ────────────────────────────────────────────────────────── */
   .input {
-    @apply w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900
-    outline-none transition-all placeholder:text-slate-400
-    focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
-    disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60;
+    @apply w-full rounded-[11px] border border-[--hairline] bg-[--surface] px-[15px] py-3 text-[15px] text-[--ink]
+    outline-none transition-shadow duration-150 placeholder:text-[#A8A5A0]
+    focus:border-[--accent] focus:shadow-[0_0_0_3px_var(--accent-ring)]
+    disabled:cursor-not-allowed disabled:bg-[--sunken] disabled:opacity-60;
   }
-  .input-error { @apply border-red-400 focus:border-red-500 focus:ring-red-500/10; }
+  .input-error { @apply border-[--danger] focus:border-[--danger] focus:shadow-[0_0_0_3px_rgba(220,38,38,.14)]; }
 
   /* ── Buttons ───────────────────────────────────────────────────────── */
-  .btn         { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-150 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 select-none; }
+  .btn         { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-[background-color,border-color,box-shadow,transform] duration-150 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-50 select-none; }
   .btn-sm      { @apply btn px-3 py-1.5 text-xs rounded-lg; }
   .btn-icon    { @apply btn p-2.5; }
-  .btn-primary {
-    @apply btn bg-blue-600 text-white shadow-[0_1px_3px_0_rgb(37,99,235,0.4)]
-    hover:bg-blue-700 hover:shadow-[0_4px_12px_0_rgb(37,99,235,0.35)];
-  }
-  .btn-secondary { @apply btn border border-slate-200 bg-white text-slate-700 shadow-[0_1px_2px_0_rgb(0,0,0,0.05)] hover:bg-slate-50 hover:border-slate-300; }
-  .btn-danger  { @apply btn bg-red-600 text-white shadow-sm hover:bg-red-700; }
-  .btn-ghost   { @apply btn bg-transparent text-slate-600 hover:bg-slate-100 shadow-none; }
-  .btn-success { @apply btn bg-emerald-600 text-white shadow-sm hover:bg-emerald-700; }
+  .btn-primary { @apply btn bg-[--accent] text-white shadow-[0_10px_22px_-12px_var(--accent)] hover:bg-[--accent-hover]; }
+  .btn-ink     { @apply btn bg-[--ink] text-white hover:bg-black; }
+  .btn-secondary { @apply btn border border-[--hairline] bg-[--surface] text-[--ink-soft] hover:border-[--hairline-strong] hover:bg-[--sunken]; }
+  .btn-danger  { @apply btn bg-[--danger] text-white hover:bg-[#B91C1C]; }
+  .btn-ghost   { @apply btn bg-transparent text-[--muted] shadow-none hover:bg-[--sunken] hover:text-[--ink]; }
+  .btn-success { @apply btn bg-[--success] text-white hover:bg-[#0C7F50]; }
 
   /* ── Badges ────────────────────────────────────────────────────────── */
-  .badge        { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
-  .badge-blue   { @apply badge bg-blue-100 text-blue-700; }
-  .badge-green  { @apply badge bg-emerald-100 text-emerald-700; }
-  .badge-amber  { @apply badge bg-amber-100 text-amber-700; }
-  .badge-red    { @apply badge bg-red-100 text-red-700; }
-  .badge-orange { @apply badge bg-orange-100 text-orange-700; }
-  .badge-slate  { @apply badge bg-slate-100 text-slate-600; }
-  .badge-purple { @apply badge bg-purple-100 text-purple-700; }
-  .badge-cyan   { @apply badge bg-cyan-100 text-cyan-700; }
+  /* Tones are semantic: blue = active/live, amber = waiting on a human,
+     red = failed/escalated, green = done, slate = inert. */
+  .badge        { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-tight text-[11px] font-semibold; }
+  .badge-blue   { @apply badge bg-[--accent-soft] text-[--accent]; }
+  .badge-green  { @apply badge bg-[--success-soft] text-[--success]; }
+  .badge-amber  { @apply badge bg-[--warn-soft] text-[#B26B04]; }
+  .badge-red    { @apply badge bg-[--danger-soft] text-[--danger]; }
+  .badge-orange { @apply badge bg-[--warn-soft] text-[#B26B04]; }
+  .badge-slate  { @apply badge bg-[--sunken] text-[--muted]; }
+  .badge-cyan   { @apply badge bg-[#E4F6F5] text-[#0B7A78]; }
+  /* Inert-but-notable: heavier than badge-slate, still carries no status meaning. */
+  .badge-neutral { @apply badge bg-[--sunken] text-[--ink-soft]; }
 
   /* ── Tables ────────────────────────────────────────────────────────── */
   .tbl-wrap    { @apply overflow-x-auto; }
   .tbl         { @apply w-full text-left text-sm; }
-  .tbl thead tr { @apply border-b border-slate-200 bg-slate-50/80; }
-  .tbl th      { @apply px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400; }
-  .tbl td      { @apply border-b border-slate-100/80 px-4 py-3.5; }
+  .tbl thead tr { @apply border-b border-[--hairline] bg-[--sunken]; }
+  .tbl th      { @apply px-4 py-3 font-tight text-[10.5px] font-semibold uppercase tracking-[.1em] text-[--muted]; }
+  .tbl td      { @apply border-b border-[#F1EFEA] px-4 py-3.5; }
   .tbl tbody tr:last-child td { @apply border-b-0; }
   .tbl tbody tr { @apply transition-colors duration-100; }
-  .tbl-clickable tbody tr { @apply cursor-pointer hover:bg-blue-50/40; }
+  .tbl-clickable tbody tr { @apply cursor-pointer hover:bg-[--sunken]; }
 
   /* ── Nav ───────────────────────────────────────────────────────────── */
-  .nav-item        { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition-all duration-150 hover:bg-slate-50 hover:text-slate-900; }
-  .nav-item-active { @apply nav-item bg-blue-50 !text-blue-700 font-semibold hover:bg-blue-50 hover:text-blue-700; }
+  .nav-item        { @apply flex items-center gap-3 rounded-[10px] px-2.5 py-[9px] text-sm font-medium text-[#A1A1AA] transition-colors hover:bg-white/5 hover:text-white; }
+  .nav-item-active { @apply nav-item bg-[--accent] !text-white; }
 
   /* ── Filter bar ────────────────────────────────────────────────────── */
-  .filter-bar     { @apply mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-[0_1px_3px_0_rgb(0,0,0,0.04)]; }
-  .filter-divider { @apply h-5 w-px bg-slate-200; }
+  .filter-bar     { @apply mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[--hairline] bg-[--surface] p-3; }
+  .filter-divider { @apply h-5 w-px bg-[--hairline]; }
 
   /* ── Chat bubbles ──────────────────────────────────────────────────── */
-  .bubble-user   { @apply max-w-[75%] rounded-2xl rounded-tr-sm bg-blue-600 px-4 py-2.5 text-sm text-white shadow-sm; }
-  .bubble-bot    { @apply max-w-[75%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm; }
-  .bubble-system { @apply rounded-full bg-slate-100 px-4 py-1.5 text-xs font-medium text-slate-500; }
+  .bubble-user   { @apply max-w-[75%] rounded-2xl rounded-tr-sm bg-[--accent] px-4 py-2.5 text-sm text-white; }
+  .bubble-bot    { @apply max-w-[75%] rounded-2xl rounded-tl-sm border border-[--hairline] bg-[--surface] px-4 py-2.5 text-sm text-[--ink-soft]; }
+  .bubble-system { @apply rounded-full bg-[--sunken] px-4 py-1.5 text-xs font-medium text-[--muted]; }
 
   /* ── Skeleton ──────────────────────────────────────────────────────── */
-  .skeleton { @apply animate-pulse rounded-xl bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 bg-[length:200%_100%]; }
+  .skeleton { @apply rounded-xl bg-[#EFEDE8]; }
 }
 
-/* Skeleton shimmer */
-@keyframes shimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
-.skeleton { animation: shimmer 1.6s ease-in-out infinite, pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+/* One cheap animation, not two stacked. `pulse` on top of `shimmer` meant every
+   placeholder ran two compositor loops at once. */
+@keyframes shimmer { 0% { background-position: -180% 0 } 100% { background-position: 180% 0 } }
+.skeleton {
+  background-image: linear-gradient(90deg, #EFEDE8 0%, #F7F5F1 50%, #EFEDE8 100%);
+  background-size: 180% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
 
-/* Animations */
-@keyframes fadeUp   { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+/* ── Entrance animations ──────────────────────────────────────────────────
+   Deliberately short. These fire on every route change, so anything longer
+   reads as lag rather than polish — the page should already be there. */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
 @keyframes fadeIn   { from { opacity:0 } to { opacity:1 } }
-@keyframes scaleIn  { from { opacity:0; transform:scale(0.96) } to { opacity:1; transform:scale(1) } }
+@keyframes scaleIn  { from { opacity:0; transform:scale(.98) } to { opacity:1; transform:scale(1) } }
 @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-@keyframes slideLeft { from { opacity:0; transform:translateX(-12px) } to { opacity:1; transform:translateX(0) } }
+@keyframes slideLeft { from { opacity:0; transform:translateX(-6px) } to { opacity:1; transform:translateX(0) } }
 
-.anim-up    { animation: fadeUp   .32s cubic-bezier(.16,1,.3,1) both; }
-.anim-in    { animation: fadeIn   .25s ease-out both; }
-.anim-scale { animation: scaleIn  .25s ease-out both; }
+.anim-up    { animation: fadeUp   .18s cubic-bezier(.16,1,.3,1) both; }
+.anim-in    { animation: fadeIn   .15s ease-out both; }
+.anim-scale { animation: scaleIn  .16s ease-out both; }
 .anim-dot   { animation: dotPulse 2.2s ease-in-out infinite; }
-.anim-left  { animation: slideLeft .3s cubic-bezier(.16,1,.3,1) both; }
+.anim-left  { animation: slideLeft .18s cubic-bezier(.16,1,.3,1) both; }
 
-.d1{animation-delay:.04s}.d2{animation-delay:.08s}.d3{animation-delay:.12s}
-.d4{animation-delay:.16s}.d5{animation-delay:.20s}.d6{animation-delay:.24s}
-.d7{animation-delay:.28s}.d8{animation-delay:.32s}
+/* Stagger is a garnish, not a loading sequence — the old .04s–.32s ramp made
+   every screen visibly assemble itself. Capped so the last item is ~60ms late. */
+.d1{animation-delay:.01s}.d2{animation-delay:.02s}.d3{animation-delay:.03s}
+.d4{animation-delay:.04s}.d5{animation-delay:.045s}.d6{animation-delay:.05s}
+.d7{animation-delay:.055s}.d8{animation-delay:.06s}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 /* Scrollbar */
 ::-webkit-scrollbar { width:5px; height:5px; }
 ::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:99px; }
-::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+::-webkit-scrollbar-thumb { background:var(--hairline-strong); border-radius:99px; }
+::-webkit-scrollbar-thumb:hover { background:#B0ADA6; }
 
 /* Focus ring utility */
-.focus-ring { @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2; }
+.focus-ring { @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-[--accent] focus-visible:ring-offset-2 focus-visible:ring-offset-[--canvas]; }

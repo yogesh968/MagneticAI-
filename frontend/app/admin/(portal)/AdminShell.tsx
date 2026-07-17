@@ -37,17 +37,17 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
   const crumb = NAV.find((n) => isActive(n))?.label ?? "Admin";
 
   return (
-    <div className="flex h-full" style={{ background: "#0f172a" }}>
-      {/* Dark sidebar */}
-      <aside className="flex w-60 shrink-0 flex-col border-r border-white/10" style={{ background: "#0f172a" }}>
+    <div className="flex h-full bg-[#0A0A0B]">
+      {/* Dark sidebar — matches DashboardShell's dark surface treatment */}
+      <aside className="flex w-60 shrink-0 flex-col border-r border-[#1C1C20] bg-[#0A0A0B]">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 shadow-lg">
+        <div className="flex h-16 items-center gap-3 border-b border-[#1C1C20] px-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent-500 to-accent-700 shadow-accent">
             <ShieldCheck size={17} className="text-white" />
           </div>
           <div>
             <p className="text-[14px] font-bold text-white leading-none">Admin Portal</p>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-purple-400 mt-0.5">Magentic AI</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8A8A8F] mt-0.5">Magentic AI</p>
           </div>
         </div>
 
@@ -59,31 +59,31 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
               <Link
                 key={href}
                 href={href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
                   active
-                    ? "bg-violet-600 text-white shadow-[0_2px_8px_0_rgb(124,58,237,0.4)]"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
+                    ? "bg-accent-500 text-white shadow-[0_6px_16px_-8px_rgba(47,107,255,.9)]"
+                    : "text-[#A1A1AA] hover:bg-white/5 hover:text-white"
                 }`}
               >
                 <Icon size={15} className="shrink-0" />
                 <span className="flex-1">{label}</span>
-                {active && <ChevronRight size={12} className="text-violet-300" />}
+                {active && <ChevronRight size={12} className="text-white/70" />}
               </Link>
             );
           })}
         </nav>
 
         {/* User footer */}
-        <div className="border-t border-white/10 p-3">
+        <div className="border-t border-[#1C1C20] p-3">
           <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/10 transition-colors">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-500 to-accent-700 text-xs font-bold text-white">
               {user.name?.[0]?.toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold text-white">{user.name}</p>
-              <p className="truncate text-[11px] text-slate-500 capitalize">{user.role}</p>
+              <p className="truncate text-[11px] text-[#71717A] capitalize">{user.role}</p>
             </div>
-            <button onClick={logout} title="Sign out" className="text-slate-500 hover:text-red-400 transition-colors">
+            <button onClick={logout} title="Sign out" className="text-[#71717A] hover:text-red-400 transition-colors">
               <LogOut size={14} />
             </button>
           </div>
@@ -91,23 +91,23 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden bg-slate-50">
+      <div className="flex flex-1 flex-col overflow-hidden bg-canvas">
         {/* Topbar */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-6 shadow-sm">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-hairline bg-white px-6 shadow-xs">
           <nav className="flex items-center gap-2 text-sm">
-            <span className="font-semibold text-violet-600 flex items-center gap-1.5">
+            <span className="font-semibold text-ink flex items-center gap-1.5">
               <ShieldCheck size={14} /> Admin
             </span>
             {crumb !== "Overview" && (
               <>
-                <ChevronRight size={13} className="text-slate-300" />
-                <span className="font-semibold text-slate-800">{crumb}</span>
+                <ChevronRight size={13} className="text-ink-faint" />
+                <span className="font-semibold text-ink">{crumb}</span>
               </>
             )}
           </nav>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 font-medium">{user.name}</span>
-            <span className="flex items-center gap-1.5 rounded-full bg-violet-50 border border-violet-200/60 px-3 py-1.5 text-[11px] font-bold text-violet-700 uppercase tracking-wider">
+            <span className="text-xs text-ink-muted font-medium">{user.name}</span>
+            <span className="flex items-center gap-1.5 rounded-full bg-sunken border border-hairline px-3 py-1.5 text-[11px] font-bold text-ink uppercase tracking-wider">
               <ShieldCheck size={11} /> Admin Portal
             </span>
           </div>

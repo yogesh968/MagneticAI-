@@ -50,8 +50,8 @@ export default function EscalationsPage() {
               <Flame size={22} />
             </div>
             <div>
-              <p className="text-3xl font-extrabold text-slate-900 tabular-nums">{urgent?.total ?? 0}</p>
-              <p className="text-sm font-medium text-slate-500 mt-0.5">Urgent open tickets</p>
+              <p className="text-3xl font-extrabold text-ink tabular-nums">{urgent?.total ?? 0}</p>
+              <p className="text-sm font-medium text-ink-muted mt-0.5">Urgent open tickets</p>
             </div>
             {(urgent?.total ?? 0) > 0 && (
               <div className="ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white animate-pulse">
@@ -60,19 +60,19 @@ export default function EscalationsPage() {
             )}
           </div>
           <div className="card flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-600 ring-1 ring-orange-200/60">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 ring-1 ring-amber-200/60">
               <AlertTriangle size={22} />
             </div>
             <div>
-              <p className="text-3xl font-extrabold text-slate-900 tabular-nums">{high?.total ?? 0}</p>
-              <p className="text-sm font-medium text-slate-500 mt-0.5">High-priority tickets</p>
+              <p className="text-3xl font-extrabold text-ink tabular-nums">{high?.total ?? 0}</p>
+              <p className="text-sm font-medium text-ink-muted mt-0.5">High-priority tickets</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Table */}
-      <div className="rounded-2xl bg-white border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0,0,0,0.05)] overflow-hidden anim-up d3">
+      <div className="rounded-2xl bg-white border border-hairline shadow-card overflow-hidden anim-up d3">
         {loading ? (
           <Loading rows={5} />
         ) : allItems.length === 0 ? (
@@ -104,17 +104,17 @@ export default function EscalationsPage() {
                       onClick={() => router.push(`/dashboard/tickets/${t._id}`)}
                     >
                       <td>
-                        <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200/60 px-2 py-1 rounded-lg">
+                        <span className="font-mono text-xs font-bold text-ink bg-sunken border border-hairline px-2 py-1 rounded-lg">
                           {t.ticketNumber}
                         </span>
                       </td>
                       <td>
-                        <p className="font-semibold text-slate-900 max-w-[260px] truncate">{t.subject}</p>
-                        <p className="text-xs text-slate-400 mt-0.5 max-w-[260px] truncate">{t.description}</p>
+                        <p className="font-semibold text-ink max-w-[260px] truncate">{t.subject}</p>
+                        <p className="text-xs text-ink-faint mt-0.5 max-w-[260px] truncate">{t.description}</p>
                       </td>
                       <td>
-                        <p className="font-medium text-slate-800">{t.customerName || "—"}</p>
-                        <p className="text-xs text-slate-400">{t.customerEmail || "—"}</p>
+                        <p className="font-medium text-ink">{t.customerName || "—"}</p>
+                        <p className="text-xs text-ink-faint">{t.customerEmail || "—"}</p>
                       </td>
                       <td>
                         <Badge tone={PRIORITY_TONE[t.priority] ?? "slate"}>{t.priority}</Badge>
@@ -124,15 +124,15 @@ export default function EscalationsPage() {
                           hot
                             ? t.priority === "urgent"
                               ? "bg-red-100 text-red-700"
-                              : "bg-orange-100 text-orange-700"
-                            : "bg-slate-100 text-slate-600"
+                              : "bg-amber-100 text-amber-700"
+                            : "bg-sunken text-ink-muted"
                         }`}>
                           <Clock size={11} />
                           {waitStr}
                         </span>
                       </td>
                       <td>
-                        <ChevronRight size={15} className="text-slate-300" />
+                        <ChevronRight size={15} className="text-ink-faint" />
                       </td>
                     </tr>
                   );

@@ -13,7 +13,7 @@ import { Badge, Empty, Loading, PageHeader, Spinner } from "@/components/ui";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
-const PRESET_COLORS = ["#2563eb", "#7c3aed", "#059669", "#dc2626", "#d97706", "#0891b2", "#db2777", "#475569"];
+const PRESET_COLORS = ["#0A0A0B", "#7c3aed", "#059669", "#dc2626", "#d97706", "#0891b2", "#db2777", "#475569"];
 
 type CreateForm = { botName: string; description: string; personality: Bot["personality"]; widgetColor: string };
 
@@ -29,7 +29,7 @@ function EmbedSnippet({ botId }: { botId: string }) {
   };
 
   return (
-    <div className="relative mt-3 rounded-lg bg-slate-900 p-3 pr-10 font-mono text-[11px] leading-relaxed text-emerald-400">
+    <div className="relative mt-3 rounded-lg bg-ink p-3 pr-10 font-mono text-[11px] leading-relaxed text-emerald-400">
       <pre className="overflow-x-auto whitespace-pre-wrap break-all">{snippet}</pre>
       <button
         onClick={copy}
@@ -50,7 +50,7 @@ export default function BotsClient() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors, isSubmitting } } = useForm<CreateForm>({
-    defaultValues: { botName: "", description: "", personality: "professional", widgetColor: "#2563eb" },
+    defaultValues: { botName: "", description: "", personality: "professional", widgetColor: "#0A0A0B" },
   });
   const color = watch("widgetColor");
 
@@ -138,7 +138,7 @@ export default function BotsClient() {
         <form onSubmit={handleSubmit(create)} className="card anim-up mb-5">
           <div className="mb-4 flex items-center justify-between">
             <p className="section-title">Create a bot</p>
-            <button type="button" onClick={() => { setCreating(false); reset(); }} className="btn-ghost btn-sm p-1.5 text-slate-400">
+            <button type="button" onClick={() => { setCreating(false); reset(); }} className="btn-ghost btn-sm p-1.5 text-ink-faint">
               <X size={15} />
             </button>
           </div>
@@ -151,7 +151,7 @@ export default function BotsClient() {
                 placeholder="Billing Assistant"
                 className={`input ${errors.botName ? "input-error" : ""}`}
               />
-              {errors.botName && <p className="mt-1 text-xs text-red-500">{errors.botName.message}</p>}
+              {errors.botName && <p className="mt-1 text-xs text-red-600">{errors.botName.message}</p>}
             </div>
             <div>
               <label className="label">Personality</label>
@@ -164,13 +164,13 @@ export default function BotsClient() {
           </div>
 
           <div className="mt-4">
-            <label className="label">Description <span className="font-normal text-slate-400">(optional)</span></label>
+            <label className="label">Description <span className="font-normal text-ink-faint">(optional)</span></label>
             <input
               {...register("description", { maxLength: { value: 280, message: "Max 280 characters" } })}
               placeholder="Handles invoices, payments and subscription questions"
               className="input"
             />
-            {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description.message}</p>}
+            {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
           </div>
 
           <div className="mt-4">
@@ -183,13 +183,13 @@ export default function BotsClient() {
                   onClick={() => setValue("widgetColor", c)}
                   style={{ background: c }}
                   title={c}
-                  className={`h-8 w-8 rounded-lg transition-transform hover:scale-110 ${color === c ? "scale-110 ring-2 ring-blue-600 ring-offset-2" : ""}`}
+                  className={`h-8 w-8 rounded-lg transition-transform hover:scale-110 ${color === c ? "scale-110 ring-2 ring-ink ring-offset-2" : ""}`}
                 />
               ))}
             </div>
           </div>
 
-          <div className="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
+          <div className="mt-5 flex justify-end gap-2 border-t border-hairline pt-4">
             <button type="button" onClick={() => { setCreating(false); reset(); }} className="btn-secondary">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="btn-primary gap-2">
               {isSubmitting ? <Spinner size={14} /> : <Plus size={14} />} Create bot
@@ -202,7 +202,7 @@ export default function BotsClient() {
       {!bots ? (
         <Loading rows={3} />
       ) : bots.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200/60 bg-white">
+        <div className="rounded-2xl border border-hairline bg-white">
           <Empty
             title="No bots yet"
             text="Create a bot, give it a knowledge base, and embed it on your site."
@@ -213,7 +213,7 @@ export default function BotsClient() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {bots.map((bot, i) => {
-            const botColor = bot.settings?.widgetColor ?? "#2563eb";
+            const botColor = bot.settings?.widgetColor ?? "#0A0A0B";
             const docs = bot.documentCount ?? 0;
             const busy = busyId === bot._id;
             return (
@@ -228,10 +228,10 @@ export default function BotsClient() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="truncate text-[15px] font-bold text-slate-900">{bot.botName}</p>
+                      <p className="truncate text-[15px] font-bold text-ink">{bot.botName}</p>
                       {bot.isDefault && <Star size={12} className="shrink-0 fill-amber-400 text-amber-400" />}
                     </div>
-                    <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">
+                    <p className="mt-0.5 line-clamp-2 text-xs text-ink-faint">
                       {bot.description || "No description"}
                     </p>
                   </div>
@@ -241,34 +241,34 @@ export default function BotsClient() {
                 <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   <Badge tone={bot.isActive ? "green" : "slate"}>{bot.isActive ? "Active" : "Inactive"}</Badge>
                   {bot.isDefault && <Badge tone="amber">Default</Badge>}
-                  <Badge tone="purple">{bot.personality}</Badge>
+                  <Badge tone="neutral">{bot.personality}</Badge>
                 </div>
 
                 {/* Knowledge summary — the thing that tells you what this bot knows */}
-                <div className="mt-4 rounded-xl border border-slate-200/60 bg-slate-50/60 p-3">
+                <div className="mt-4 rounded-xl border border-hairline bg-sunken/60 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-faint">
                       <BookOpen size={11} /> Knowledge base
                     </span>
                     <Link
                       href={`/dashboard/knowledge-base?bot=${bot._id}`}
-                      className="text-[11px] font-semibold text-blue-600 hover:underline"
+                      className="text-[11px] font-semibold text-ink hover:underline"
                     >
                       Manage →
                     </Link>
                   </div>
                   {docs === 0 ? (
-                    <p className="mt-2 text-xs text-slate-400">
+                    <p className="mt-2 text-xs text-ink-faint">
                       No documents — this bot can only handle small talk.
                     </p>
                   ) : (
                     <div className="mt-2 flex items-center gap-4 text-xs">
-                      <span className="font-semibold text-slate-700 tabular-nums">
+                      <span className="font-semibold text-ink-soft tabular-nums">
                         {docs} doc{docs === 1 ? "" : "s"}
                       </span>
-                      <span className="text-slate-400 tabular-nums">{bot.chunkCount ?? 0} chunks</span>
+                      <span className="text-ink-faint tabular-nums">{bot.chunkCount ?? 0} chunks</span>
                       {(bot.failedCount ?? 0) > 0 && (
-                        <span className="flex items-center gap-1 font-semibold text-red-500">
+                        <span className="flex items-center gap-1 font-semibold text-red-600">
                           <AlertTriangle size={11} /> {bot.failedCount} failed
                         </span>
                       )}
@@ -280,13 +280,13 @@ export default function BotsClient() {
                 {showEmbed === bot._id && <EmbedSnippet botId={bot._id} />}
 
                 {/* Actions */}
-                <div className="mt-4 flex items-center gap-1.5 border-t border-slate-100 pt-3">
+                <div className="mt-4 flex items-center gap-1.5 border-t border-hairline pt-3">
                   <Link href={`/dashboard/ai-config?bot=${bot._id}`} className="btn-secondary btn-sm gap-1.5">
                     <Settings2 size={12} /> Configure
                   </Link>
                   <button
                     onClick={() => setShowEmbed(showEmbed === bot._id ? null : bot._id)}
-                    className="btn-ghost btn-sm gap-1.5 text-slate-500"
+                    className="btn-ghost btn-sm gap-1.5 text-ink-muted"
                   >
                     <Code2 size={12} /> Embed
                   </button>
@@ -298,7 +298,7 @@ export default function BotsClient() {
                           onClick={() => makeDefault(bot)}
                           disabled={busy}
                           title="Make default"
-                          className="btn-ghost btn-sm p-1.5 text-slate-300 hover:text-amber-500"
+                          className="btn-ghost btn-sm p-1.5 text-ink-faint hover:text-amber-500"
                         >
                           <Star size={13} />
                         </button>
@@ -311,7 +311,7 @@ export default function BotsClient() {
                             : bot.isDefault ? "Make another bot the default first"
                             : "Delete bot"
                         }
-                        className="btn-ghost btn-sm p-1.5 text-slate-300 hover:text-red-500 disabled:cursor-not-allowed disabled:hover:text-slate-300"
+                        className="btn-ghost btn-sm p-1.5 text-ink-faint hover:text-red-600 disabled:cursor-not-allowed disabled:hover:text-ink-faint"
                       >
                         {busy ? <Spinner size={13} /> : <Trash2 size={13} />}
                       </button>

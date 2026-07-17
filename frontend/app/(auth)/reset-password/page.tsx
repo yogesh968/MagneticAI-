@@ -38,39 +38,39 @@ function ResetForm() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
+    <main className="flex min-h-screen items-center justify-center bg-canvas p-6">
       <div className="w-full max-w-[400px]">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/30">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-ink shadow-lg shadow-ink/30">
             <KeyRound size={26} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Set new password</h1>
-          <p className="mt-1.5 text-sm text-slate-500">Enter a strong new password for your account</p>
+          <h1 className="text-2xl font-bold text-ink">Set new password</h1>
+          <p className="mt-1.5 text-sm text-ink-muted">Enter a strong new password for your account</p>
         </div>
 
         {!token ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
             <p className="font-semibold text-red-700">Invalid reset link</p>
             <p className="mt-1 text-sm text-red-600">This link is missing a reset token. Please request a new one.</p>
-            <Link href="/forgot-password" className="mt-4 inline-block text-sm font-semibold text-blue-600 hover:underline">
+            <Link href="/forgot-password" className="mt-4 inline-block text-sm font-semibold text-accent-500 hover:text-accent-600">
               Request new link →
             </Link>
           </div>
         ) : done ? (
-          <div className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+              <svg className="h-6 w-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <p className="font-semibold text-green-800">Password updated!</p>
-            <p className="mt-1 text-sm text-green-700">Redirecting you to sign in…</p>
+            <p className="font-semibold text-emerald-800">Password updated!</p>
+            <p className="mt-1 text-sm text-emerald-700">Redirecting you to sign in…</p>
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="rounded-2xl border border-hairline bg-white p-8 shadow-xs">
             <form onSubmit={handleSubmit(submit)} className="space-y-5">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">New password</label>
+                <label className="label">New password</label>
                 <div className="relative">
                   <input
                     type={showPwd ? "text" : "password"}
@@ -79,7 +79,7 @@ function ResetForm() {
                     className="input pr-11"
                     autoComplete="new-password"
                   />
-                  <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  <button type="button" onClick={() => setShowPwd(!showPwd)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink">
                     {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
@@ -87,7 +87,7 @@ function ResetForm() {
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Confirm password</label>
+                <label className="label">Confirm password</label>
                 <input type="password" {...register("confirm")} placeholder="••••••••" className="input" autoComplete="new-password" />
                 {errors.confirm && <p className="mt-1 text-xs text-red-500">{String(errors.confirm.message)}</p>}
               </div>
@@ -104,8 +104,8 @@ function ResetForm() {
                 ) : "Set new password"}
               </button>
             </form>
-            <p className="mt-5 text-center text-sm text-slate-500">
-              <Link href="/login" className="font-semibold text-blue-600 hover:underline">← Back to sign in</Link>
+            <p className="mt-5 text-center text-sm text-ink-muted">
+              <Link href="/login" className="font-semibold text-accent-500 hover:text-accent-600">← Back to sign in</Link>
             </p>
           </div>
         )}
@@ -116,7 +116,7 @@ function ResetForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="animate-spin h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent" /></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="animate-spin h-8 w-8 rounded-full border-4 border-ink border-t-transparent" /></div>}>
       <ResetForm />
     </Suspense>
   );

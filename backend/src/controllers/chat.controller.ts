@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
 import { Bot, Conversation, Message, Tenant } from "../models/index.js";
-import { answerWithRag, streamAnswerWithRag } from "../services/rag.service.js";
+import { HISTORY_TURNS, answerWithRag, streamAnswerWithRag, type RagHistory } from "../services/rag.service.js";
 import { createTicket, evaluateEscalation } from "../services/escalation.service.js";
 import { signSessionToken } from "../utils/jwt.js";
 
@@ -47,7 +47,7 @@ export async function createSession(req: Request, res: Response) {
 
 async function persistReply(tenantId: string, conversation: any, userMessage: string, result: Awaited<ReturnType<typeof answerWithRag>>, started: number) {
   const escalation = await evaluateEscalation(tenantId, `${userMessage}\n${result.answer}`, conversation.botId ? String(conversation.botId) : undefined);
-  const assistant = await Message.create({ tenantId, conversationId: conversation._id, role: "assistant", content: result.answer, metadata: { responseTime: Date.now() - started, documentsReferenced: result.documentsReferenced } });
+  const assistant = await Message.create({ tenantId, conversationId: conversation._id, role: "assistant", content: result.answer, metadata: { responseTime: Date.now() - started, documentsReferenced: result.documentsReferenced, sources: result.sources } });
   conversation.messageCount += 2;
   // Only create ticket on explicit escalation trigger — not just because KB had no context
   let ticket;
@@ -63,6 +63,31 @@ async function loadSessionConversation(req: Request) {
   return { conversation, tenantId, target: { tenantId, botId } };
 }
 
+/**
+ * The last few turns, oldest first, for the model to read.
+ *
+ * Must be called BEFORE the incoming message is persisted, or the user's own
+ * question arrives twice — once as history and once as the live query.
+ * Only user/assistant turns: system notes and agent handoff chatter would read
+ * as instructions to the model.
+ */
+async function loadHistory(tenantId: string, conversationId: any): Promise<RagHistory> {
+  const recent = await Message.find({
+    tenantId,
+    conversationId,
+    role: { $in: ["user", "assistant"] },
+  })
+    .sort({ createdAt: -1 })
+    .limit(HISTORY_TURNS)
+    .select("role content")
+    .lean<any[]>();
+
+  return recent
+    .reverse()
+    .map((m) => ({ role: m.role as "user" | "assistant", content: String(m.content ?? "") }))
+    .filter((m) => m.content.trim().length > 0);
+}
+
 export async function sendMessage(req: Request, res: Response) {
   const started = Date.now();
   const { message, customerName, customerEmail } = req.body;
@@ -70,16 +95,17 @@ export async function sendMessage(req: Request, res: Response) {
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
   if (customerName) conversation.customerName = customerName;
   if (customerEmail) conversation.customerEmail = customerEmail;
+  const history = await loadHistory(tenantId, conversation._id);
   await Message.create({ tenantId, conversationId: conversation._id, role: "user", content: message });
 
   try {
-    const result = await answerWithRag(target, message);
+    const result = await answerWithRag(target, message, history);
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
     res.json({ message: assistant, ticket, escalated: Boolean(ticket) });
   } catch (error) {
     console.error("[chat] AI generation failed completely:", error);
     const fallbackMessage = "We're having trouble right now, an agent will follow up shortly.";
-    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [] };
+    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [], sources: [] };
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
     // Explicitly create a high priority ticket since the system failed
     if (!ticket) {
@@ -96,18 +122,24 @@ export async function streamMessage(req: Request, res: Response) {
   if (!conversation) return res.status(404).json({ message: "Conversation not found" });
   if (customerName) conversation.customerName = customerName;
   if (customerEmail) conversation.customerEmail = customerEmail;
+  const history = await loadHistory(tenantId, conversation._id);
   await Message.create({ tenantId, conversationId: conversation._id, role: "user", content: message });
   res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" });
 
   try {
-    const result = await streamAnswerWithRag(target, message, (token) => res.write(`event: token\ndata: ${JSON.stringify({ token })}\n\n`));
+    const result = await streamAnswerWithRag(
+      target,
+      message,
+      (token) => res.write(`event: token\ndata: ${JSON.stringify({ token })}\n\n`),
+      history,
+    );
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
     res.write(`event: done\ndata: ${JSON.stringify({ message: assistant, ticket, escalated: Boolean(ticket) })}\n\n`);
   } catch (error) {
     console.error("[chat] AI generation failed completely during stream:", error);
     const fallbackMessage = "We're having trouble right now, an agent will follow up shortly.";
     res.write(`event: token\ndata: ${JSON.stringify({ token: fallbackMessage })}\n\n`);
-    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [] };
+    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [], sources: [] };
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
     if (!ticket) {
       await createTicket(tenantId, conversation, "SYSTEM ERROR: " + message, "high");

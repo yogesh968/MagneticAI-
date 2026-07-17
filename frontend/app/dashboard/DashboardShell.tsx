@@ -3,13 +3,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  BarChart3, BookOpen, Bot, LogOut, MessageSquare,
-  TicketCheck, Zap, AlertTriangle, LayoutDashboard,
-  ChevronRight, Bell, Code2, Plug, Users, X, Menu,
-  ShieldCheck, Headphones, Settings,
+  BarChart3, BookOpen, Bot, LogOut, MessageSquare, TicketCheck,
+  AlertTriangle, LayoutDashboard, ChevronRight, Bell, Code2, Plug,
+  Users, X, Menu, Search,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { DASHBOARD_NAV, matches, navFor, type Role } from "@/lib/routes";
+import { Logo } from "@/components/brand/Logo";
+import { matches, navFor, type Role } from "@/lib/routes";
 
 const ICONS: Record<string, typeof LayoutDashboard> = {
   "/dashboard": LayoutDashboard,
@@ -26,52 +26,14 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
 };
 
 const GROUPS = [
-  { label: "Overview",  hrefs: ["/dashboard"] },
-  { label: "Support",   hrefs: ["/dashboard/conversations", "/dashboard/tickets", "/dashboard/escalations"] },
-  { label: "AI",        hrefs: ["/dashboard/bots", "/dashboard/knowledge-base", "/dashboard/ai-config"] },
-  { label: "Platform",  hrefs: ["/dashboard/analytics"] },
-  { label: "Manage",    hrefs: ["/dashboard/team", "/dashboard/widget", "/dashboard/integrations"] },
+  { label: "Workspace", hrefs: ["/dashboard"] },
+  { label: "Support", hrefs: ["/dashboard/conversations", "/dashboard/tickets", "/dashboard/escalations"] },
+  { label: "Knowledge", hrefs: ["/dashboard/bots", "/dashboard/knowledge-base", "/dashboard/ai-config"] },
+  { label: "Platform", hrefs: ["/dashboard/analytics"] },
+  { label: "Manage", hrefs: ["/dashboard/team", "/dashboard/widget", "/dashboard/integrations"] },
 ];
 
-// Per-role theming
-const ROLE_THEME = {
-  admin: {
-    gradient: "from-blue-600 to-indigo-700",
-    accent: "bg-blue-600",
-    badge: "bg-blue-100 text-blue-700 border-blue-200",
-    badgeLabel: "Admin",
-    icon: ShieldCheck,
-    avatarGradient: "from-blue-500 to-indigo-600",
-    topbarBadge: "bg-blue-50 border-blue-200 text-blue-700",
-    topbarDot: "bg-blue-500",
-    navActive: "bg-blue-50 text-blue-700 font-semibold hover:bg-blue-50",
-    platformLabel: "Support Platform",
-  },
-  agent: {
-    gradient: "from-emerald-500 to-teal-600",
-    accent: "bg-emerald-600",
-    badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    badgeLabel: "Agent",
-    icon: Headphones,
-    avatarGradient: "from-emerald-500 to-teal-600",
-    topbarBadge: "bg-emerald-50 border-emerald-200 text-emerald-700",
-    topbarDot: "bg-emerald-500",
-    navActive: "bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-50",
-    platformLabel: "Agent Workspace",
-  },
-  superadmin: {
-    gradient: "from-violet-600 to-purple-700",
-    accent: "bg-violet-600",
-    badge: "bg-violet-100 text-violet-700 border-violet-200",
-    badgeLabel: "Super Admin",
-    icon: ShieldCheck,
-    avatarGradient: "from-violet-500 to-purple-600",
-    topbarBadge: "bg-violet-50 border-violet-200 text-violet-700",
-    topbarDot: "bg-violet-500",
-    navActive: "bg-violet-50 text-violet-700 font-semibold hover:bg-violet-50",
-    platformLabel: "Super Admin",
-  },
-};
+const ROLE_LABEL: Record<Role, string> = { admin: "Admin", agent: "Agent", superadmin: "Super Admin" };
 
 export type ShellUser = { name: string; role: Role };
 
@@ -86,9 +48,11 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   const [openTickets, setOpenTickets] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Once per mount, not per navigation: the badge is ambient, and refetching it
+  // on every route change duplicated a request each screen already makes.
   useEffect(() => {
     api.get("/analytics/overview").then((r) => setOpenTickets(r.data.openTickets ?? 0)).catch(() => {});
-  }, [pathname]);
+  }, []);
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
@@ -100,58 +64,33 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
     router.refresh();
   };
 
-  const role = user.role;
-  const theme = ROLE_THEME[role] ?? ROLE_THEME.agent;
-  const RoleIcon = theme.icon;
-
-  const nav = navFor(role);
+  const nav = navFor(user.role);
   const groups = GROUPS.map((g) => ({
     label: g.label,
     items: nav.filter((n) => g.hrefs.includes(n.href)),
   })).filter((g) => g.items.length > 0);
 
-  const activeItem = nav.find((n) => matches(n, pathname));
-  const crumb = activeItem?.label ?? "Dashboard";
+  const crumb = nav.find((n) => matches(n, pathname))?.label ?? "Dashboard";
+  const initials = user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
 
   const SidebarContent = () => (
-    <div className="flex h-full flex-col bg-white">
-
-      {/* ── Role-colored header strip ── */}
-      <div className={`bg-gradient-to-br ${theme.gradient} px-4 py-4`}>
-        <div className="flex items-center gap-2.5 mb-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-sm">
-            <Zap size={15} className="text-white" fill="white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-white leading-none">Magentic AI</p>
-            <p className="text-[10px] font-medium text-white/60 mt-0.5">{theme.platformLabel}</p>
-          </div>
-          <button onClick={() => setMobileOpen(false)} className="md:hidden rounded-lg p-1 text-white/60 hover:text-white hover:bg-white/10">
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* Role badge */}
-        <div className="flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2">
-          <RoleIcon size={13} className="text-white shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-white leading-none">{user.name}</p>
-            <p className="text-[10px] text-white/60 mt-0.5">{theme.badgeLabel}</p>
-          </div>
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold text-white uppercase tracking-wide">
-            {role}
-          </span>
-        </div>
+    <div className="flex h-full flex-col bg-[#0A0A0B]">
+      <div className="flex items-center justify-between border-b border-[#1C1C20] px-[22px] pb-[18px] pt-[22px]">
+        <Link href="/dashboard">
+          <Logo mode="dark" size={28} />
+        </Link>
+        <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-[#8A8A8F] hover:text-white md:hidden">
+          <X size={16} />
+        </button>
       </div>
 
-      {/* ── Nav ── */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+      <nav className="flex flex-1 flex-col gap-[22px] overflow-y-auto px-3.5 py-5">
         {groups.map((group) => (
           <div key={group.label}>
-            <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400/80">
+            <div className="px-2.5 pb-2.5 font-tight text-[10px] uppercase tracking-[.16em] text-[#71717A]">
               {group.label}
-            </p>
-            <div className="space-y-0.5">
+            </div>
+            <div className="flex flex-col gap-[3px]">
               {group.items.map((item) => {
                 const Icon = ICONS[item.href] ?? LayoutDashboard;
                 const active = matches(item, pathname);
@@ -160,22 +99,23 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                    className={`flex items-center gap-[11px] rounded-[10px] px-2.5 py-[9px] text-sm font-medium transition-colors duration-150 ${
                       active
-                        ? `${theme.navActive} border border-transparent`
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        ? "bg-accent-500 text-white shadow-[0_6px_16px_-8px_rgba(47,107,255,.9)]"
+                        : "text-[#A1A1AA] hover:bg-white/5 hover:text-white"
                     }`}
                   >
-                    <Icon size={15} className="shrink-0" />
+                    <Icon size={18} strokeWidth={1.8} className="flex-none" />
                     <span className="flex-1 truncate">{item.label}</span>
                     {showBadge && (
-                      <span className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold ${
-                        active ? "bg-white/80 text-slate-700" : "bg-red-500 text-white"
-                      }`}>
+                      <span
+                        className={`rounded-full px-[7px] py-0.5 font-tight text-[10.5px] font-bold ${
+                          active ? "bg-white/20 text-white" : "bg-white text-[#0A0A0B]"
+                        }`}
+                      >
                         {openTickets > 99 ? "99+" : openTickets}
                       </span>
                     )}
-                    {active && !showBadge && <ChevronRight size={12} className="opacity-50" />}
                   </Link>
                 );
               })}
@@ -184,21 +124,21 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         ))}
       </nav>
 
-      {/* ── User footer ── */}
-      <div className="border-t border-slate-100 p-3">
-        <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50 transition-colors">
-          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${theme.avatarGradient} text-xs font-bold text-white shadow-sm`}>
-            {user.name[0]?.toUpperCase()}
+      <div className="border-t border-[#1C1C20] p-3.5">
+        <div className="flex items-center gap-2.5 rounded-[14px] border border-[#242428] bg-white/[.04] p-3.5">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] bg-gradient-to-br from-accent-500 to-accent-700 font-tight text-xs font-bold text-white ring-1 ring-white/10">
+            {initials}
+          </span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate text-[13.5px] font-semibold text-white">{user.name}</div>
+            <div className="font-tight text-[10px] uppercase tracking-[.1em] text-[#8A8A8F]">{ROLE_LABEL[user.role]}</div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold text-slate-900 leading-tight">{user.name}</p>
-            <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide mt-0.5 ${theme.badge}`}>
-              <RoleIcon size={8} />
-              {theme.badgeLabel}
-            </span>
-          </div>
-          <button onClick={logout} title="Sign out" className="shrink-0 rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors">
-            <LogOut size={14} />
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="flex-none rounded-lg p-1.5 text-[#8A8A8F] transition-colors hover:bg-white/10 hover:text-white"
+          >
+            <LogOut size={15} />
           </button>
         </div>
       </div>
@@ -206,75 +146,61 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   );
 
   return (
-    <div className="flex h-full bg-[#f0f2f5]">
-      {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[220px] border-r border-slate-200/60 shadow-[1px_0_0_0_rgb(226,232,240,0.6)] md:block">
+    <div className="flex min-h-screen bg-canvas">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] border-r border-[#1C1C20] md:block">
         <SidebarContent />
       </aside>
 
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileOpen(false)}>
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-          <aside className="absolute left-0 top-0 h-full w-[220px] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <aside className="absolute left-0 top-0 h-full w-[252px]" onClick={(e) => e.stopPropagation()}>
             <SidebarContent />
           </aside>
         </div>
       )}
 
-      {/* Main */}
-      <div className="flex min-h-screen flex-1 flex-col md:ml-[220px]">
+      <div className="flex min-h-screen flex-1 flex-col md:ml-[252px]">
+        <header className="sticky top-0 z-20 flex h-[66px] shrink-0 items-center gap-4 border-b border-hairline bg-canvas/85 px-4 backdrop-blur-[12px] sm:px-[26px]">
+          <button onClick={() => setMobileOpen(true)} className="rounded-[11px] border border-hairline bg-white p-2 text-ink-soft md:hidden">
+            <Menu size={18} />
+          </button>
 
-        {/* ── Topbar ── */}
-        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center justify-between border-b border-slate-200/60 bg-white/90 px-5 backdrop-blur-md md:px-6">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setMobileOpen(true)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 transition-colors md:hidden">
-              <Menu size={18} />
-            </button>
-            <nav className="flex items-center gap-1.5 text-sm">
-              <span className="text-slate-400 font-medium hidden sm:block">Dashboard</span>
-              {crumb !== "Overview" && (
-                <>
-                  <ChevronRight size={13} className="text-slate-300 hidden sm:block" />
-                  <span className="font-semibold text-slate-800">{crumb}</span>
-                </>
-              )}
-              {crumb === "Overview" && (
-                <span className="font-semibold text-slate-800 sm:hidden">Dashboard</span>
-              )}
-            </nav>
-          </div>
+          <nav className="flex items-center gap-2 text-sm">
+            <span className="hidden font-medium text-ink-muted sm:block">Dashboard</span>
+            {crumb !== "Overview" && (
+              <>
+                <ChevronRight size={13} className="hidden text-ink-faint sm:block" />
+                <span className="font-semibold text-ink">{crumb}</span>
+              </>
+            )}
+            {crumb === "Overview" && <span className="font-semibold text-ink sm:hidden">Dashboard</span>}
+          </nav>
 
-          <div className="flex items-center gap-2">
-            {/* Role pill — clearly visible */}
-            <div className={`hidden sm:flex items-center gap-1.5 rounded-full border px-3 py-1.5 ${theme.topbarBadge}`}>
-              <RoleIcon size={11} />
-              <span className="text-[11px] font-bold uppercase tracking-wide">{theme.badgeLabel}</span>
-            </div>
+          {/* Design shows a global search here; there is no search endpoint yet, so
+              this navigates to conversations, which is the only searchable list. */}
+          <button
+            onClick={() => router.push("/dashboard/conversations")}
+            className="ml-auto hidden items-center gap-2.5 rounded-[11px] border border-hairline bg-white px-3.5 py-2 text-sm text-ink-muted transition-colors hover:border-hairline-strong lg:flex lg:w-[280px]"
+          >
+            <Search size={16} strokeWidth={2} />
+            <span className="flex-1 text-left">Search conversations…</span>
+          </button>
 
-            {/* Live dot */}
-            <div className="hidden sm:flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-slate-50 px-3 py-1.5">
-              <span className={`h-1.5 w-1.5 rounded-full ${theme.topbarDot} anim-dot`} />
-              <span className="text-[11px] font-semibold text-slate-600 tracking-wide">Live</span>
-            </div>
-
-            {/* Notification bell */}
+          <div className="ml-auto flex items-center gap-2.5 lg:ml-0">
             {openTickets > 0 && (
               <button
                 onClick={() => router.push("/dashboard/escalations")}
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+                title={`${openTickets} open ticket${openTickets === 1 ? "" : "s"}`}
+                className="relative flex h-10 w-10 items-center justify-center rounded-[11px] border border-hairline bg-white text-ink-soft transition-colors hover:border-hairline-strong"
               >
-                <Bell size={16} />
-                <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm">
-                  {openTickets > 9 ? "9+" : openTickets}
-                </span>
+                <Bell size={19} strokeWidth={1.8} />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-canvas bg-accent-500" />
               </button>
             )}
-
-            {/* Role-colored avatar */}
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${theme.avatarGradient} text-xs font-bold text-white shadow-sm`}>
-              {user.name[0]?.toUpperCase()}
-            </div>
+            <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-accent-500 to-accent-700 font-tight text-sm font-bold text-white">
+              {initials}
+            </span>
           </div>
         </header>
 

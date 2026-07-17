@@ -13,17 +13,29 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xl text-xs">
-      <p className="font-semibold text-slate-700 mb-1.5">{label}</p>
+    <div className="rounded-xl border border-hairline bg-white px-4 py-3 shadow-card-lg text-xs">
+      <p className="font-tight font-semibold text-ink mb-1.5">{label}</p>
       {payload.map((p: any) => (
         <div key={p.name} className="flex items-center gap-2 mb-0.5">
           <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-slate-500">{p.name}:</span>
-          <span className="font-bold text-slate-800">{p.value}</span>
+          <span className="text-ink-muted">{p.name}:</span>
+          <span className="font-bold text-ink">{p.value}</span>
         </div>
       ))}
     </div>
   );
+};
+
+/**
+ * Tailwind scans source statically, so a class built as `bg-${color}-50` is
+ * never generated and the element renders unstyled. Every tone a quick-link
+ * tile can take has to appear here as a whole, literal class name.
+ */
+const QUICK_TONE: Record<string, { chip: string; icon: string }> = {
+  teal:    { chip: "bg-teal-100",    icon: "text-teal-600" },
+  accent:  { chip: "bg-accent-100",  icon: "text-accent-600" },
+  emerald: { chip: "bg-emerald-100", icon: "text-emerald-600" },
+  ink:     { chip: "bg-sunken",      icon: "text-ink" },
 };
 
 export default function AdminOverviewPage() {
@@ -69,10 +81,10 @@ export default function AdminOverviewPage() {
   ] : [];
 
   const quickLinks = [
-    { icon: Building2, label: "Tenants",        href: "/admin/tenants", color: "violet" },
-    { icon: Users,     label: "All Users",       href: "/admin/users",   color: "blue" },
-    { icon: Activity,  label: "Platform Stats",  href: "/admin/stats",   color: "emerald" },
-    { icon: Database,  label: "System Health",   href: "/admin/system",  color: "orange" },
+    { icon: Building2, label: "Tenants",        href: "/admin/tenants", tone: "teal" },
+    { icon: Users,     label: "All Users",       href: "/admin/users",   tone: "accent" },
+    { icon: Activity,  label: "Platform Stats",  href: "/admin/stats",   tone: "emerald" },
+    { icon: Database,  label: "System Health",   href: "/admin/system",  tone: "ink" },
   ];
 
   return (
@@ -80,14 +92,14 @@ export default function AdminOverviewPage() {
       {/* Header */}
       <div className="anim-up flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-slate-900">
+          <h1 className="page-title">
             {user?.name ? `Welcome, ${user.name.split(" ")[0]}` : "Admin Overview"}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">{today} · Platform-wide overview</p>
+          <p className="page-sub">{today} · Platform-wide overview</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2">
-          <ShieldCheck size={13} className="text-violet-600" />
-          <span className="text-xs font-semibold text-violet-700 capitalize">{user?.role ?? "Admin"} Portal</span>
+        <div className="flex items-center gap-2 rounded-xl border border-hairline bg-sunken px-3 py-2">
+          <ShieldCheck size={13} className="text-ink-muted" />
+          <span className="text-xs font-semibold text-ink capitalize">{user?.role ?? "Admin"} Portal</span>
         </div>
       </div>
 
@@ -100,65 +112,68 @@ export default function AdminOverviewPage() {
 
       {/* Quick nav */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 anim-up d3">
-        {quickLinks.map(({ icon: Icon, label, href, color }) => (
-          <button
-            key={href}
-            onClick={() => router.push(href)}
-            className="group flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_1px_3px_0_rgb(0,0,0,0.04)] hover:border-violet-200 hover:shadow-[0_4px_16px_0_rgb(124,58,237,0.08)] hover:-translate-y-0.5 transition-all text-left"
-          >
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-${color}-50 border border-${color}-100`}>
-              <Icon size={18} className={`text-${color}-600`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900">{label}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Manage →</p>
-            </div>
-            <ArrowRight size={14} className="text-slate-300 group-hover:text-violet-500 shrink-0 transition-colors" />
-          </button>
-        ))}
+        {quickLinks.map(({ icon: Icon, label, href, tone }) => {
+          const t = QUICK_TONE[tone] ?? QUICK_TONE.ink;
+          return (
+            <button
+              key={href}
+              onClick={() => router.push(href)}
+              className="group flex items-center gap-3 rounded-2xl border border-hairline bg-white p-4 shadow-xs hover:border-hairline-strong hover:shadow-card-md hover:-translate-y-0.5 transition-[border-color,box-shadow,transform] text-left"
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.chip}`}>
+                <Icon size={18} className={t.icon} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-ink">{label}</p>
+                <p className="text-xs text-ink-faint mt-0.5">Manage →</p>
+              </div>
+              <ArrowRight size={14} className="text-ink-faint group-hover:text-ink shrink-0 transition-colors" />
+            </button>
+          );
+        })}
       </div>
 
       {/* Chart */}
-      <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_1px_3px_0_rgb(0,0,0,0.04)] anim-up d4">
+      <div className="card anim-up d4">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-sm font-semibold text-slate-900">Platform Activity</p>
-            <p className="text-xs text-slate-400 mt-0.5">Last 30 days — conversations & escalations</p>
+            <p className="section-title">Platform Activity</p>
+            <p className="text-xs text-ink-muted mt-0.5">Last 30 days — conversations & escalations</p>
           </div>
           <div className="flex gap-4 text-xs font-medium">
-            <span className="flex items-center gap-1.5 text-slate-500">
-              <span className="h-2 w-3 rounded-full bg-violet-500" /> Conversations
+            <span className="flex items-center gap-1.5 text-ink-muted">
+              <span className="h-2 w-3 rounded-full bg-accent-500" /> Conversations
             </span>
-            <span className="flex items-center gap-1.5 text-slate-500">
+            <span className="flex items-center gap-1.5 text-ink-muted">
               <span className="h-2 w-3 rounded-full bg-red-400" /> Escalations
             </span>
           </div>
         </div>
         {charts.length === 0 ? (
           <div className="h-52 flex flex-col items-center justify-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
-              <Activity size={18} className="text-slate-400" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sunken">
+              <Activity size={18} className="text-ink-faint" />
             </div>
-            <p className="text-sm text-slate-400 font-medium">No activity data yet</p>
+            <p className="text-sm text-ink-muted font-medium">No activity data yet</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={charts} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
               <defs>
                 <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#2F6BFF" stopOpacity={0.20} />
+                  <stop offset="95%" stopColor="#2F6BFF" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f87171" stopOpacity={0.13} />
                   <stop offset="95%" stopColor="#f87171" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#e2e8f0", strokeWidth: 1 }} />
-              <Area type="monotone" dataKey="conversations" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#gv)" dot={false} name="Conversations" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEDE8" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#D9D6CF", strokeWidth: 1 }} />
+              <Area type="monotone" dataKey="conversations" stroke="#2F6BFF" strokeWidth={2.5} fill="url(#gv)" dot={false} name="Conversations" />
               <Area type="monotone" dataKey="escalations"  stroke="#f87171" strokeWidth={2}   fill="url(#gr)" dot={false} name="Escalations" />
             </AreaChart>
           </ResponsiveContainer>
@@ -167,20 +182,22 @@ export default function AdminOverviewPage() {
 
       {/* Onboarding hint */}
       {!overview?.totalConversations && (
-        <div className="rounded-2xl border-2 border-dashed border-violet-200 bg-violet-50/30 p-8 text-center anim-up d5">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 mx-auto mb-3">
-            <Bot size={24} className="text-violet-600" />
+        <div className="card anim-up d5 border-2 border-dashed border-hairline-strong bg-white">
+          <div className="flex flex-col items-center py-2 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-500 to-accent-700 shadow-accent">
+              <Bot size={24} className="text-white" />
+            </div>
+            <p className="font-tight font-bold text-ink">No platform activity yet</p>
+            <p className="mt-1.5 text-sm text-ink-muted max-w-sm mx-auto">
+              Seed demo data or have tenants embed the widget to see activity here.
+            </p>
+            <button
+              onClick={() => router.push("/admin/tenants")}
+              className="btn-ink btn-sm mt-5 gap-2"
+            >
+              <Globe size={14} /> Manage Tenants
+            </button>
           </div>
-          <p className="font-semibold text-slate-800">No platform activity yet</p>
-          <p className="mt-1.5 text-sm text-slate-500 max-w-sm mx-auto">
-            Seed demo data or have tenants embed the widget to see activity here.
-          </p>
-          <button
-            onClick={() => router.push("/admin/tenants")}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 transition-colors"
-          >
-            <Globe size={14} /> Manage Tenants
-          </button>
         </div>
       )}
     </div>

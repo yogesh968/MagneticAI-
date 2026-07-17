@@ -13,6 +13,10 @@ import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-reac
 export const Button = ({ className = "", ...p }: ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button {...p} className={`btn-primary ${className}`} />
 );
+/** Ink-filled action, for destructive-adjacent or secondary-primary CTAs. */
+export const ButtonInk = ({ className = "", ...p }: ButtonHTMLAttributes<HTMLButtonElement>) => (
+  <button {...p} className={`btn-ink ${className}`} />
+);
 export const ButtonSecondary = ({ className = "", ...p }: ButtonHTMLAttributes<HTMLButtonElement>) => (
   <button {...p} className={`btn-secondary ${className}`} />
 );
@@ -40,7 +44,7 @@ export const Card = ({ children, className = "" }: { children: ReactNode; classN
 const BADGE_CLS: Record<string, string> = {
   slate: "badge-slate", blue: "badge-blue", green: "badge-green",
   red: "badge-red", amber: "badge-amber", orange: "badge-orange",
-  purple: "badge-purple", cyan: "badge-cyan",
+  neutral: "badge-neutral", cyan: "badge-cyan",
 };
 export const Badge = ({
   children, tone = "slate", className = "",
@@ -54,12 +58,12 @@ export const Empty = ({
 }: { title: string; text: string; icon?: ReactNode; action?: ReactNode }) => (
   <div className="flex flex-col items-center py-20 text-center anim-up">
     {icon && (
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-slate-400">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-accent-100 bg-accent-50 text-accent-500">
         {icon}
       </div>
     )}
-    <p className="text-base font-semibold text-slate-700">{title}</p>
-    <p className="mt-1.5 max-w-xs text-sm text-slate-400 leading-relaxed">{text}</p>
+    <p className="font-tight text-base font-semibold text-ink">{title}</p>
+    <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-ink-muted">{text}</p>
     {action && <div className="mt-5">{action}</div>}
   </div>
 );
@@ -84,13 +88,17 @@ export const Spinner = ({ size = 18, className = "" }: { size?: number; classNam
 /* ── Avatar ─────────────────────────────────────────────────────────────── */
 export const Avatar = ({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) => {
   const s = { sm: "h-7 w-7 text-xs", md: "h-9 w-9 text-sm", lg: "h-12 w-12 text-base" };
+  // Identity colours, so the same person stays the same colour across screens.
   const colors = [
-    "from-blue-500 to-blue-600", "from-violet-500 to-violet-600",
-    "from-emerald-500 to-teal-600", "from-amber-500 to-orange-500", "from-pink-500 to-rose-500",
+    "from-accent-500 to-accent-700",
+    "from-[#111113] to-[#3A3A3E]",
+    "from-emerald-500 to-teal-600",
+    "from-amber-500 to-orange-500",
+    "from-rose-500 to-pink-600",
   ];
   const color = colors[(name?.charCodeAt(0) ?? 0) % colors.length];
   return (
-    <span className={`inline-flex items-center justify-center rounded-full bg-gradient-to-br font-bold text-white ${color} ${s[size]}`}>
+    <span className={`inline-flex items-center justify-center rounded-full bg-gradient-to-br font-tight font-bold text-white ${color} ${s[size]}`}>
       {name?.[0]?.toUpperCase() ?? "?"}
     </span>
   );
@@ -98,12 +106,12 @@ export const Avatar = ({ name, size = "md" }: { name: string; size?: "sm" | "md"
 
 /* ── StatCard ───────────────────────────────────────────────────────────── */
 const STAT_TONE: Record<string, { bg: string; text: string; border: string; bar: string }> = {
-  blue:   { bg: "bg-blue-50",   text: "text-blue-600",   border: "border-blue-100",   bar: "bg-blue-500" },
-  amber:  { bg: "bg-amber-50",  text: "text-amber-600",  border: "border-amber-100",  bar: "bg-amber-500" },
-  green:  { bg: "bg-emerald-50",text: "text-emerald-600",border: "border-emerald-100",bar: "bg-emerald-500" },
-  red:    { bg: "bg-red-50",    text: "text-red-600",    border: "border-red-100",    bar: "bg-red-500" },
-  purple: { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100", bar: "bg-purple-500" },
-  cyan:   { bg: "bg-cyan-50",   text: "text-cyan-600",   border: "border-cyan-100",   bar: "bg-cyan-500" },
+  blue:   { bg: "bg-accent-50",  text: "text-accent-500",  border: "border-accent-100",  bar: "bg-accent-500" },
+  amber:  { bg: "bg-amber-50",   text: "text-amber-600",   border: "border-amber-100",   bar: "bg-amber-500" },
+  green:  { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100", bar: "bg-emerald-500" },
+  red:    { bg: "bg-red-50",     text: "text-red-600",     border: "border-red-100",     bar: "bg-red-500" },
+  neutral: { bg: "bg-sunken",    text: "text-ink",         border: "border-hairline",    bar: "bg-ink" },
+  cyan:   { bg: "bg-[#E4F6F5]",  text: "text-[#0B7A78]",   border: "border-[#C9EBE9]",   bar: "bg-[#0B7A78]" },
 };
 
 export function StatCard({
@@ -120,13 +128,13 @@ export function StatCard({
 }) {
   const t = STAT_TONE[tone] ?? STAT_TONE.blue;
   return (
-    <div className={`card group anim-up ${delay ?? ""} hover:shadow-[0_4px_16px_0_rgb(0,0,0,0.08)] transition-shadow duration-200`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${t.bg} ${t.border} transition-transform duration-200 group-hover:scale-105`}>
+    <div className={`card-hover group anim-up ${delay ?? ""}`}>
+      <div className="mb-3 flex items-start justify-between">
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${t.bg} ${t.border}`}>
           <span className={t.text}>{icon}</span>
         </div>
         {trendLabel && (
-          <div className={`flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5 ${
+          <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
             trend === "up" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
           }`}>
             {trend === "up" ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
@@ -134,9 +142,9 @@ export function StatCard({
           </div>
         )}
       </div>
-      <p className="text-[28px] font-extrabold tabular-nums tracking-tight text-slate-900 leading-none">{value}</p>
-      <p className="mt-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-      {sub && <p className="mt-1 text-[11px] text-slate-400">{sub}</p>}
+      <p className="font-tight text-[30px] font-extrabold leading-none tracking-[-.03em] text-ink tabular-nums">{value}</p>
+      <p className="mt-2 font-tight text-[11px] font-semibold uppercase tracking-[.1em] text-ink-muted">{label}</p>
+      {sub && <p className="mt-1 text-[11px] text-ink-faint">{sub}</p>}
     </div>
   );
 }
@@ -161,11 +169,11 @@ export function Pagination({
   page, pages, total, onChange,
 }: { page: number; pages: number; total: number; onChange: (p: number) => void }) {
   return (
-    <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
-      <p className="text-xs text-slate-400">
-        Page <span className="font-semibold text-slate-700">{page}</span> of{" "}
-        <span className="font-semibold text-slate-700">{pages}</span> ·{" "}
-        <span className="font-semibold text-slate-700">{total}</span> total
+    <div className="flex items-center justify-between border-t border-hairline px-5 py-3">
+      <p className="text-xs text-ink-muted">
+        Page <span className="font-semibold text-ink">{page}</span> of{" "}
+        <span className="font-semibold text-ink">{pages}</span> ·{" "}
+        <span className="font-semibold text-ink">{total}</span> total
       </p>
       <div className="flex items-center gap-1">
         <button
@@ -181,8 +189,8 @@ export function Pagination({
             <button
               key={p}
               onClick={() => onChange(p)}
-              className={`btn-sm min-w-[32px] px-2 rounded-lg font-semibold ${
-                p === page ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100"
+              className={`btn-sm min-w-[32px] rounded-lg px-2 font-semibold ${
+                p === page ? "bg-accent-500 text-white" : "text-ink-muted hover:bg-sunken"
               }`}
             >
               {p}
@@ -205,8 +213,8 @@ export function Pagination({
 export function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-center justify-between py-2.5">
-      <span className="text-xs font-medium text-slate-500">{label}</span>
-      <span className="text-xs font-semibold text-slate-800">{value}</span>
+      <span className="text-xs font-medium text-ink-muted">{label}</span>
+      <span className="text-xs font-semibold text-ink-soft">{value}</span>
     </div>
   );
 }
@@ -220,15 +228,15 @@ export function Tabs({
   onChange: (k: string) => void;
 }) {
   return (
-    <div className="mb-5 flex gap-1 border-b border-slate-200">
+    <div className="mb-5 flex gap-1 border-b border-hairline">
       {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
           className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
             active === t.key
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-slate-500 hover:text-slate-700"
+              ? "border-accent-500 text-accent-500"
+              : "border-transparent text-ink-muted hover:text-ink"
           }`}
         >
           {t.icon}
@@ -241,5 +249,5 @@ export function Tabs({
 
 /* ── Divider ────────────────────────────────────────────────────────────── */
 export const Divider = ({ className = "" }: { className?: string }) => (
-  <hr className={`my-4 border-slate-100 ${className}`} />
+  <hr className={`my-4 border-hairline ${className}`} />
 );

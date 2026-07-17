@@ -19,7 +19,7 @@ function StatusIcon({ status }: { status: string }) {
   if (status === "indexed")    return <CheckCircle2 size={14} className="text-emerald-500" />;
   if (status === "failed")     return <XCircle size={14} className="text-red-500" />;
   if (status === "processing") return <Loader2 size={14} className="text-amber-500 animate-spin" />;
-  return <Loader2 size={14} className="text-blue-400" />;
+  return <Loader2 size={14} className="text-ink-faint" />;
 }
 
 function fmtBytes(b: number) {
@@ -115,7 +115,7 @@ export default function KnowledgeBaseClient() {
     return (
       <div className="p-7">
         <PageHeader title="Knowledge Base" subtitle="Documents your bots answer from" />
-        <div className="rounded-2xl border border-slate-200/60 bg-white">
+        <div className="rounded-2xl border border-hairline bg-white">
           <Empty
             title="Create a bot first"
             text="Documents belong to a bot, so there is nowhere to put them yet."
@@ -129,9 +129,9 @@ export default function KnowledgeBaseClient() {
 
   const items = data?.items ?? [];
   const stats = [
-    { label: "Documents", value: data?.total ?? 0, color: "text-blue-600 bg-blue-50 ring-blue-200/60" },
+    { label: "Documents", value: data?.total ?? 0, color: "text-ink bg-sunken ring-hairline" },
     { label: "Indexed", value: items.filter((d: any) => d.status === "indexed").length, color: "text-emerald-600 bg-emerald-50 ring-emerald-200/60" },
-    { label: "Total Chunks", value: items.reduce((s: number, d: any) => s + (d.chunkCount ?? 0), 0), color: "text-purple-600 bg-purple-50 ring-purple-200/60" },
+    { label: "Total Chunks", value: items.reduce((s: number, d: any) => s + (d.chunkCount ?? 0), 0), color: "text-ink bg-sunken ring-hairline" },
   ];
   const failed = items.filter((d: any) => d.status === "failed").length;
 
@@ -180,7 +180,7 @@ export default function KnowledgeBaseClient() {
               <div className={`flex h-11 w-11 items-center justify-center rounded-xl text-xl font-extrabold ring-1 ${color} tabular-nums`}>
                 {value}
               </div>
-              <p className="text-sm font-semibold text-slate-600">{label}</p>
+              <p className="text-sm font-semibold text-ink-muted">{label}</p>
             </div>
           ))}
         </div>
@@ -193,25 +193,25 @@ export default function KnowledgeBaseClient() {
           onDragLeave={() => setDrag(false)}
           onDrop={onDrop}
           onClick={() => fileRef.current?.click()}
-          className={`mb-5 flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-14 transition-all ${
-            drag ? "border-blue-400 bg-blue-50" : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/40"
+          className={`mb-5 flex cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-14 transition-colors ${
+            drag ? "border-hairline-strong bg-sunken" : "border-hairline bg-white hover:border-hairline-strong hover:bg-sunken/40"
           }`}
         >
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-sunken text-ink">
             <CloudUpload size={28} />
           </div>
           <div className="text-center">
-            <p className="text-base font-semibold text-slate-800">
-              Drop a file to teach <span style={{ color: selected.settings?.widgetColor ?? "#2563eb" }}>{selected.botName}</span>
+            <p className="text-base font-semibold text-ink-soft">
+              Drop a file to teach <span style={{ color: selected.settings?.widgetColor ?? "#0A0A0B" }}>{selected.botName}</span>
             </p>
-            <p className="mt-1 text-sm text-slate-400">Supports PDF, DOCX, TXT, Markdown — up to 10 MB</p>
+            <p className="mt-1 text-sm text-ink-faint">Supports PDF, DOCX, TXT, Markdown — up to 10 MB</p>
           </div>
         </div>
       )}
 
       {/* Table */}
       <div
-        className="anim-up d2 overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-[0_1px_3px_0_rgb(0,0,0,0.05)]"
+        className="anim-up d2 overflow-hidden rounded-2xl border border-hairline bg-white shadow-card"
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
@@ -248,20 +248,20 @@ export default function KnowledgeBaseClient() {
                   <tr key={d._id} className={`anim-up d${Math.min(i + 1, 8)}`}>
                     <td>
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50">
-                          <FileText size={15} className="text-slate-500" />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-hairline bg-sunken">
+                          <FileText size={15} className="text-ink-muted" />
                         </div>
-                        <span className="max-w-[220px] truncate font-semibold text-slate-900">{d.name}</span>
+                        <span className="max-w-[220px] truncate font-semibold text-ink">{d.name}</span>
                       </div>
                     </td>
                     <td>
-                      <span className="rounded-lg border border-slate-200/60 bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="rounded-lg border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-ink-muted">
                         {d.type}
                       </span>
                     </td>
-                    <td className="text-sm tabular-nums text-slate-500">{fmtBytes(d.metadata?.size)}</td>
+                    <td className="text-sm tabular-nums text-ink-muted">{fmtBytes(d.metadata?.size)}</td>
                     <td>
-                      <span className={`text-sm font-bold tabular-nums ${d.chunkCount > 0 ? "text-slate-900" : "text-slate-300"}`}>
+                      <span className={`text-sm font-bold tabular-nums ${d.chunkCount > 0 ? "text-ink" : "text-ink-faint"}`}>
                         {d.chunkCount}
                       </span>
                     </td>
@@ -271,13 +271,13 @@ export default function KnowledgeBaseClient() {
                         <Badge tone={STATUS_TONE[d.status] ?? "slate"}>{d.status}</Badge>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap text-xs text-slate-400">
+                    <td className="whitespace-nowrap text-xs text-ink-faint">
                       {new Date(d.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </td>
                     <td>
                       <button
                         onClick={() => del(d._id, d.name)}
-                        className="btn-ghost btn-sm p-2 text-slate-300 hover:text-red-500"
+                        className="btn-ghost btn-sm p-2 text-ink-faint hover:text-red-500"
                         title="Remove document"
                       >
                         <Trash2 size={14} />

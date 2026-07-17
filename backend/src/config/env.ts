@@ -53,6 +53,13 @@ export const allowedOrigins = env.FRONTEND_URL.split(",")
   .map((o) => o.trim().replace(/\/$/, ""))
   .filter(Boolean);
 
+/**
+ * The app's canonical origin — the first entry in FRONTEND_URL. Anything that
+ * builds a user-facing link (password reset, invites) must use this rather than
+ * FRONTEND_URL itself, which may hold several comma-separated origins.
+ */
+export const appUrl = allowedOrigins[0] ?? "http://localhost:3000";
+
 export const widgetSecret = env.WIDGET_SECRET ?? env.JWT_SECRET;
 
 // A secret that is merely long enough still must not be the shipped placeholder.
