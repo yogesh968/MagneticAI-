@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 // Recharts takes props, not classes — these are the literal token hex values
 // (accent, amber, red, faint) since they cannot resolve Tailwind utilities.
 const PIE_COLORS: Record<string, string> = {
-  urgent: "#DC2626", high: "#F59E0B", medium: "#2F6BFF", low: "#9A9AA0",
+  urgent: "#DC2626", high: "#F59E0B", medium: "#4453D6", low: "#9A9AA0",
 };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -101,8 +101,8 @@ export default function AnalyticsPage() {
             <AreaChart data={charts} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
               <defs>
                 <linearGradient id="agc" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#2F6BFF" stopOpacity={0.18} />
-                  <stop offset="95%" stopColor="#2F6BFF" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#4453D6" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="#4453D6" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="age" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#f87171" stopOpacity={0.14} />
@@ -113,7 +113,7 @@ export default function AnalyticsPage() {
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#D9D6CF" }} />
-              <Area type="monotone" dataKey="conversations" stroke="#2F6BFF" strokeWidth={2.5} fill="url(#agc)" dot={false} name="Conversations" />
+              <Area type="monotone" dataKey="conversations" stroke="#4453D6" strokeWidth={2.5} fill="url(#agc)" dot={false} name="Conversations" />
               <Area type="monotone" dataKey="escalations"  stroke="#f87171" strokeWidth={2}   fill="url(#age)" dot={false} name="Escalations" />
             </AreaChart>
           </ResponsiveContainer>
@@ -136,7 +136,7 @@ export default function AnalyticsPage() {
                   tickFormatter={(v: string) => v?.length > 20 ? v.slice(0, 20) + "…" : v}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="references" fill="#2F6BFF" radius={[0, 6, 6, 0]} name="References" />
+                <Bar dataKey="references" fill="#4453D6" radius={[0, 6, 6, 0]} name="References" />
               </BarChart>
             </ResponsiveContainer>
           </div>

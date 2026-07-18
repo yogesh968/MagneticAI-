@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import { z } from "zod";
 import { api } from "@/lib/api";
 import { AuthShell, PerkList } from "@/components/auth/AuthShell";
+import { AuthLoader } from "@/components/brand/AuthLoader";
 import { FieldError, FieldLabel, SubmitButton } from "@/components/auth/fields";
 import { authInput, safeNext } from "@/components/auth/shared";
 import { PasswordStrength, scorePassword } from "@/components/auth/PasswordStrength";
@@ -57,6 +58,14 @@ export function RegisterForm() {
   };
 
   return (
+    <>
+      {isSubmitting && (
+        <AuthLoader
+          title="Creating your workspace"
+          variant="core"
+          steps={["Setting up your tenant", "Provisioning your AI bot", "Preparing your workspace"]}
+        />
+      )}
     <AuthShell
       eyebrow="Create your workspace"
       headline="Launch an AI support desk in minutes."
@@ -149,5 +158,6 @@ export function RegisterForm() {
         </p>
       </div>
     </AuthShell>
+    </>
   );
 }

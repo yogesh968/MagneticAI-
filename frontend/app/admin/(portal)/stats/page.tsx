@@ -149,15 +149,15 @@ export default function AdminStatsPage() {
               <AreaChart data={charts} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gbl" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2F6BFF" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#2F6BFF" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#4453D6" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#4453D6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#EFEDE8" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#D9D6CF", strokeWidth: 1 }} />
-                <Area type="monotone" dataKey="conversations" stroke="#2F6BFF" strokeWidth={2} fill="url(#gbl)" dot={false} name="Conversations" />
+                <Area type="monotone" dataKey="conversations" stroke="#4453D6" strokeWidth={2} fill="url(#gbl)" dot={false} name="Conversations" />
                 <Area type="monotone" dataKey="escalations"  stroke="#f87171" strokeWidth={1.5} fill="none" dot={false} name="Escalations" />
               </AreaChart>
             </ResponsiveContainer>
@@ -179,7 +179,7 @@ export default function AdminStatsPage() {
                 <XAxis dataKey="_id" tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" fill="#2F6BFF" radius={[4, 4, 0, 0]} name="Tickets" />
+                <Bar dataKey="count" fill="#4453D6" radius={[4, 4, 0, 0]} name="Tickets" />
               </BarChart>
             </ResponsiveContainer>
           ) : (

@@ -105,13 +105,16 @@ export const Avatar = ({ name, size = "md" }: { name: string; size?: "sm" | "md"
 };
 
 /* ── StatCard ───────────────────────────────────────────────────────────── */
-const STAT_TONE: Record<string, { bg: string; text: string; border: string; bar: string }> = {
-  blue:   { bg: "bg-accent-50",  text: "text-accent-500",  border: "border-accent-100",  bar: "bg-accent-500" },
-  amber:  { bg: "bg-amber-50",   text: "text-amber-600",   border: "border-amber-100",   bar: "bg-amber-500" },
-  green:  { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100", bar: "bg-emerald-500" },
-  red:    { bg: "bg-red-50",     text: "text-red-600",     border: "border-red-100",     bar: "bg-red-500" },
-  neutral: { bg: "bg-sunken",    text: "text-ink",         border: "border-hairline",    bar: "bg-ink" },
-  cyan:   { bg: "bg-[#E4F6F5]",  text: "text-[#0B7A78]",   border: "border-[#C9EBE9]",   bar: "bg-[#0B7A78]" },
+// Restrained metric tile — flat white, hairline border, a single small tinted
+// icon and a hairline accent rail keyed to what the metric means. No gradients,
+// no glow. Whole literal class names so Tailwind's static scan keeps them.
+const STAT_TONE: Record<string, { icon: string; iconBg: string; rail: string }> = {
+  blue:   { icon: "text-accent-600",  iconBg: "bg-accent-50",  rail: "bg-accent-500" },
+  amber:  { icon: "text-amber-600",   iconBg: "bg-amber-50",   rail: "bg-amber-500" },
+  green:  { icon: "text-emerald-600", iconBg: "bg-emerald-50", rail: "bg-emerald-500" },
+  red:    { icon: "text-red-600",     iconBg: "bg-red-50",     rail: "bg-red-500" },
+  neutral:{ icon: "text-ink-soft",    iconBg: "bg-sunken",     rail: "bg-ink" },
+  cyan:   { icon: "text-[#0B7A78]",   iconBg: "bg-[#E4F6F5]",  rail: "bg-[#0B7A78]" },
 };
 
 export function StatCard({
@@ -128,23 +131,22 @@ export function StatCard({
 }) {
   const t = STAT_TONE[tone] ?? STAT_TONE.blue;
   return (
-    <div className={`card-hover group anim-up ${delay ?? ""}`}>
-      <div className="mb-3 flex items-start justify-between">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${t.bg} ${t.border}`}>
-          <span className={t.text}>{icon}</span>
+    <div className={`group anim-up relative overflow-hidden rounded-xl border border-hairline bg-white p-5 transition-colors duration-150 hover:border-hairline-strong ${delay ?? ""}`}>
+      <span className={`absolute inset-y-0 left-0 w-[3px] ${t.rail} opacity-0 transition-opacity duration-150 group-hover:opacity-100`} />
+      <div className="mb-4 flex items-start justify-between">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.iconBg} ${t.icon}`}>
+          {icon}
         </div>
         {trendLabel && (
-          <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
-            trend === "up" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
-          }`}>
-            {trend === "up" ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+          <div className={`flex items-center gap-1 text-xs font-semibold ${trend === "up" ? "text-emerald-600" : "text-red-500"}`}>
+            {trend === "up" ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {trendLabel}
           </div>
         )}
       </div>
-      <p className="font-tight text-[30px] font-extrabold leading-none tracking-[-.03em] text-ink tabular-nums">{value}</p>
-      <p className="mt-2 font-tight text-[11px] font-semibold uppercase tracking-[.1em] text-ink-muted">{label}</p>
-      {sub && <p className="mt-1 text-[11px] text-ink-faint">{sub}</p>}
+      <p className="font-tight text-[28px] font-bold leading-none tracking-[-.02em] text-ink tabular-nums">{value}</p>
+      <p className="mt-2.5 text-[13px] font-medium text-ink-soft">{label}</p>
+      {sub && <p className="mt-0.5 text-xs text-ink-muted">{sub}</p>}
     </div>
   );
 }

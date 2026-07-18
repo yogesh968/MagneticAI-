@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Inter_Tight } from "next/font/google";
+import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 // Self-hosted at build time: no render-blocking round trip to Google, and no
-// swap flash. The whole type scale is tuned for these two — a fallback breaks it.
+// swap flash. The whole type scale is tuned for these three — a fallback breaks it.
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" });
 const interTight = Inter_Tight({ subsets: ["latin"], display: "swap", variable: "--font-inter-tight" });
+// The technical/spec-sheet voice: monospace micro-labels, IDs, corner metadata.
+const jetBrainsMono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: { default: "Magentic AI", template: "%s · Magentic AI" },
@@ -15,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`h-full ${inter.variable} ${interTight.variable}`}>
+    <html lang="en" className={`h-full ${inter.variable} ${interTight.variable} ${jetBrainsMono.variable}`}>
       <body className="h-full">
         <Toaster
           position="top-right"

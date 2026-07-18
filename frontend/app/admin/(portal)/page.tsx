@@ -161,8 +161,8 @@ export default function AdminOverviewPage() {
             <AreaChart data={charts} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
               <defs>
                 <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2F6BFF" stopOpacity={0.20} />
-                  <stop offset="95%" stopColor="#2F6BFF" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#4453D6" stopOpacity={0.20} />
+                  <stop offset="95%" stopColor="#4453D6" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gr" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f87171" stopOpacity={0.13} />
@@ -173,7 +173,7 @@ export default function AdminOverviewPage() {
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#D9D6CF", strokeWidth: 1 }} />
-              <Area type="monotone" dataKey="conversations" stroke="#2F6BFF" strokeWidth={2.5} fill="url(#gv)" dot={false} name="Conversations" />
+              <Area type="monotone" dataKey="conversations" stroke="#4453D6" strokeWidth={2.5} fill="url(#gv)" dot={false} name="Conversations" />
               <Area type="monotone" dataKey="escalations"  stroke="#f87171" strokeWidth={2}   fill="url(#gr)" dot={false} name="Escalations" />
             </AreaChart>
           </ResponsiveContainer>

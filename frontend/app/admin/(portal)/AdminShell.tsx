@@ -61,7 +61,7 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
                 href={href}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-150 ${
                   active
-                    ? "bg-accent-500 text-white shadow-[0_6px_16px_-8px_rgba(47,107,255,.9)]"
+                    ? "bg-accent-500 text-white shadow-[0_6px_16px_-8px_rgba(68,83,214,.9)]"
                     : "text-[#A1A1AA] hover:bg-white/5 hover:text-white"
                 }`}
               >

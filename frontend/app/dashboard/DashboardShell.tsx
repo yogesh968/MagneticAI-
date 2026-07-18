@@ -74,20 +74,20 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   const initials = user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
 
   const SidebarContent = () => (
-    <div className="flex h-full flex-col bg-[#0A0A0B]">
-      <div className="flex items-center justify-between border-b border-[#1C1C20] px-[22px] pb-[18px] pt-[22px]">
+    <div className="flex h-full flex-col bg-white">
+      <div className="flex items-center justify-between border-b border-hairline px-[22px] pb-[18px] pt-[22px]">
         <Link href="/dashboard">
-          <Logo mode="dark" size={28} />
+          <Logo mode="light" size={28} />
         </Link>
-        <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-[#8A8A8F] hover:text-white md:hidden">
+        <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-ink-faint hover:text-ink md:hidden">
           <X size={16} />
         </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-[22px] overflow-y-auto px-3.5 py-5">
+      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-5">
         {groups.map((group) => (
           <div key={group.label}>
-            <div className="px-2.5 pb-2.5 font-tight text-[10px] uppercase tracking-[.16em] text-[#71717A]">
+            <div className="px-3 pb-2 text-[10.5px] font-bold uppercase tracking-[.13em] text-ink-faint">
               {group.label}
             </div>
             <div className="flex flex-col gap-[3px]">
@@ -99,18 +99,19 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-[11px] rounded-[10px] px-2.5 py-[9px] text-sm font-medium transition-colors duration-150 ${
+                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-colors duration-150 ${
                       active
-                        ? "bg-accent-500 text-white shadow-[0_6px_16px_-8px_rgba(47,107,255,.9)]"
-                        : "text-[#A1A1AA] hover:bg-white/5 hover:text-white"
+                        ? "bg-accent-50 font-semibold text-accent-700"
+                        : "text-ink-muted hover:bg-sunken hover:text-ink"
                     }`}
                   >
-                    <Icon size={18} strokeWidth={1.8} className="flex-none" />
+                    {active && <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent-500" />}
+                    <Icon size={18} strokeWidth={active ? 2.2 : 1.8} className={`flex-none ${active ? "text-accent-600" : "text-ink-faint group-hover:text-ink-muted"}`} />
                     <span className="flex-1 truncate">{item.label}</span>
                     {showBadge && (
                       <span
-                        className={`rounded-full px-[7px] py-0.5 font-tight text-[10.5px] font-bold ${
-                          active ? "bg-white/20 text-white" : "bg-white text-[#0A0A0B]"
+                        className={`rounded-full px-[7px] py-0.5 text-[10.5px] font-bold ${
+                          active ? "bg-accent-500 text-white" : "bg-accent-50 text-accent-600"
                         }`}
                       >
                         {openTickets > 99 ? "99+" : openTickets}
@@ -124,19 +125,19 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
         ))}
       </nav>
 
-      <div className="border-t border-[#1C1C20] p-3.5">
-        <div className="flex items-center gap-2.5 rounded-[14px] border border-[#242428] bg-white/[.04] p-3.5">
-          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] bg-gradient-to-br from-accent-500 to-accent-700 font-tight text-xs font-bold text-white ring-1 ring-white/10">
+      <div className="border-t border-hairline p-3">
+        <div className="flex items-center gap-2.5 rounded-2xl border border-hairline bg-sunken/60 p-2.5">
+          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-accent-500 to-accent-700 text-xs font-bold text-white shadow-accent">
             {initials}
           </span>
           <div className="min-w-0 flex-1 leading-tight">
-            <div className="truncate text-[13.5px] font-semibold text-white">{user.name}</div>
-            <div className="font-tight text-[10px] uppercase tracking-[.1em] text-[#8A8A8F]">{ROLE_LABEL[user.role]}</div>
+            <div className="truncate text-[13.5px] font-semibold text-ink">{user.name}</div>
+            <div className="text-[11px] font-medium text-ink-muted">{ROLE_LABEL[user.role]}</div>
           </div>
           <button
             onClick={logout}
             title="Sign out"
-            className="flex-none rounded-lg p-1.5 text-[#8A8A8F] transition-colors hover:bg-white/10 hover:text-white"
+            className="flex-none rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-white hover:text-red-500"
           >
             <LogOut size={15} />
           </button>
@@ -147,7 +148,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
 
   return (
     <div className="flex min-h-screen bg-canvas">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] border-r border-[#1C1C20] md:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] border-r border-hairline md:block">
         <SidebarContent />
       </aside>
 
