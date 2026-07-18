@@ -9,6 +9,7 @@ import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthLoader } from "@/components/brand/AuthLoader";
 import { FieldError, FieldLabel, SubmitButton } from "@/components/auth/fields";
 import { authInput } from "@/components/auth/shared";
 
@@ -61,15 +62,19 @@ export default function AdminLoginPage() {
   };
 
   return (
+    <>
+      {isSubmitting && (
+        <AuthLoader title="Accessing admin portal" variant="wire" steps={["Verifying credentials", "Checking clearance", "Opening the portal"]} />
+      )}
     <AuthShell
       eyebrow="Admin portal"
       headline="Supercharged admin control."
       blurb={
         <div className="grid max-w-[420px] grid-cols-2 gap-3">
           {CAPABILITIES.map(({ title, desc }) => (
-            <div key={title} className="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p className="m-0 text-sm font-semibold text-white">{title}</p>
-              <p className="m-0 mt-0.5 text-xs text-[#8A8A8F]">{desc}</p>
+            <div key={title} className="rounded-xl border border-hairline bg-surface/70 p-4 backdrop-blur">
+              <p className="m-0 text-sm font-semibold text-ink">{title}</p>
+              <p className="m-0 mt-0.5 text-xs text-ink-muted">{desc}</p>
             </div>
           ))}
         </div>
@@ -135,5 +140,6 @@ export default function AdminLoginPage() {
         </p>
       </div>
     </AuthShell>
+    </>
   );
 }

@@ -6,9 +6,10 @@ import { StatCard, Badge } from "@/components/ui";
 import {
   MessageSquare, TicketCheck, TrendingUp, AlertTriangle,
   ArrowRight, Bot, Clock, BookOpen, Zap, Activity,
-  ShieldCheck, Headphones, Users, BarChart3, Code2,
+  Headphones, Users, BarChart3, Code2,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { OrbBot3D } from "@/components/brand/OrbBot3D";
 
 const priorityTone: Record<string, string> = { low: "slate", medium: "cyan", high: "orange", urgent: "red" };
 const statusTone: Record<string, string> = { open: "blue", in_progress: "amber", resolved: "green", closed: "slate" };
@@ -43,6 +44,44 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+// ─── Page header ──────────────────────────────────────────────────────────────
+// Restrained and professional: an eyebrow, a title, a one-line summary, and a
+// compact KPI cluster with a small, refined 3D orb. No gradients, no glow.
+function CommandHero({
+  eyebrow, title, sub, kpiLabel, kpiValue, live, accent = true,
+}: {
+  eyebrow: string;
+  title: string;
+  sub: string;
+  kpiLabel: string;
+  kpiValue: string;
+  live: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="anim-up flex flex-col gap-6 border-b border-hairline pb-7 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[.14em] text-ink-faint">{eyebrow}</div>
+        <h1 className="font-tight text-[26px] font-bold leading-tight tracking-[-.02em] text-ink">{title}</h1>
+        <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-ink-muted">{sub}</p>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-6">
+        <div className="text-right">
+          <div className="font-tight text-[26px] font-bold leading-none tracking-[-.02em] text-ink tabular-nums">{kpiValue}</div>
+          <div className="mt-1.5 text-[11px] font-medium text-ink-muted">{kpiLabel}</div>
+        </div>
+        <div className="hidden h-11 w-px bg-hairline sm:block" />
+        <div className="hidden text-right sm:block">
+          <div className="font-tight text-[26px] font-bold leading-none tracking-[-.02em] text-ink tabular-nums">{live.split(" ")[0]}</div>
+          <div className="mt-1.5 text-[11px] font-medium text-ink-muted">{live.split(" ").slice(1).join(" ")}</div>
+        </div>
+        <OrbBot3D size={92} className="hidden md:block" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Agent home view ──────────────────────────────────────────────────────────
 function AgentDashboard({ overview, recentTickets, userName, router }: any) {
   const agentStats = [
@@ -60,29 +99,15 @@ function AgentDashboard({ overview, recentTickets, userName, router }: any) {
 
   return (
     <div className="p-6 space-y-5 max-w-[1200px]">
-      {/* Header — green tint for agent */}
-      <div className="anim-up flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50">
-              <Headphones size={14} className="text-emerald-600" />
-            </div>
-            <span className="font-tight text-xs font-bold uppercase tracking-[.16em] text-emerald-600">Agent Workspace</span>
-          </div>
-          <h1 className="page-title">
-            {userName ? `Hey, ${userName.split(" ")[0]} 👋` : "My Workspace"}
-          </h1>
-          <p className="page-sub">
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · Your support queue
-          </p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
-            <Activity size={13} className="text-emerald-600" />
-            <span className="text-xs font-semibold text-emerald-700">{overview.openTickets} open tickets</span>
-          </div>
-        </div>
-      </div>
+      <CommandHero
+        accent={false}
+        eyebrow="Agent Workspace"
+        title={userName ? `Welcome back, ${userName.split(" ")[0]}` : "My Workspace"}
+        sub="The tickets, conversations and escalations that need a human."
+        kpiLabel="Open tickets"
+        kpiValue={String(overview.openTickets)}
+        live={`${overview.escalated} escalated`}
+      />
 
       {/* Agent stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -188,29 +213,14 @@ function AdminDashboard({ overview, charts, recentTickets, userName, router }: a
 
   return (
     <div className="p-6 space-y-5 max-w-[1400px]">
-      {/* Header — blue tint for admin */}
-      <div className="anim-up flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-1 flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-50">
-              <ShieldCheck size={14} className="text-accent-500" />
-            </div>
-            <span className="font-tight text-xs font-bold uppercase tracking-[.16em] text-accent-500">Admin Dashboard</span>
-          </div>
-          <h1 className="page-title">
-            {userName ? `Welcome back, ${userName.split(" ")[0]}` : "Overview"}
-          </h1>
-          <p className="page-sub">
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · Platform overview
-          </p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1.5 rounded-xl border border-accent-100 bg-accent-50 px-3 py-2">
-            <Activity size={13} className="text-accent-500" />
-            <span className="text-xs font-semibold text-accent-700">{overview.resolutionRate}% resolved</span>
-          </div>
-        </div>
-      </div>
+      <CommandHero
+        eyebrow="Admin Overview"
+        title={userName ? `Welcome back, ${userName.split(" ")[0]}` : "Overview"}
+        sub="Conversations, tickets and AI performance across your workspace."
+        kpiLabel="AI resolution"
+        kpiValue={`${overview.resolutionRate}%`}
+        live={`${overview.openTickets} open tickets`}
+      />
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -264,8 +274,8 @@ function AdminDashboard({ overview, charts, recentTickets, userName, router }: a
               <AreaChart data={charts} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#2F6BFF" stopOpacity={0.20} />
-                    <stop offset="95%" stopColor="#2F6BFF" stopOpacity={0} />
+                    <stop offset="5%"  stopColor="#4453D6" stopOpacity={0.22} />
+                    <stop offset="95%" stopColor="#4453D6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#f87171" stopOpacity={0.13} />
@@ -276,7 +286,7 @@ function AdminDashboard({ overview, charts, recentTickets, userName, router }: a
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "#9A9AA0" }} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#D9D6CF", strokeWidth: 1 }} />
-                <Area type="monotone" dataKey="conversations" stroke="#2F6BFF" strokeWidth={2.5} fill="url(#gc)" dot={false} name="Conversations" />
+                <Area type="monotone" dataKey="conversations" stroke="#4453D6" strokeWidth={2.5} fill="url(#gc)" dot={false} name="Conversations" />
                 <Area type="monotone" dataKey="escalations"  stroke="#f87171" strokeWidth={2}   fill="url(#ge)" dot={false} name="Escalations" />
               </AreaChart>
             </ResponsiveContainer>

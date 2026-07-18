@@ -12,20 +12,25 @@
    something here: if it is blue you can click it, if it is amber or red it
    needs a human. Everything else is ink and hairline. */
 :root {
-  --canvas:   #FBFAF8;  /* page background — warm, not #FAFAFA cool grey */
+  /* Clean, friendly, light — Intercom/Crisp lineage. A faint indigo tint in the
+     neutrals ties everything to the accent so grey never reads as unconsidered. */
+  --canvas:   #F5F6FB;  /* soft cool off-white page */
   --surface:  #FFFFFF;  /* cards */
-  --sunken:   #F5F3EF;  /* table headers, wells */
-  --ink:      #0A0A0B;  /* headings, primary text */
-  --ink-soft: #2A2A2E;  /* body */
-  --muted:    #6B6B70;  /* secondary */
-  --faint:    #9A9AA0; /* tertiary */
-  --hairline: #E8E6E1;  /* warm border */
-  --hairline-strong: #D9D6CF;
+  --sunken:   #F1F2F9;  /* table headers, wells */
+  --paper:    #EEF0FB;  /* gentle indigo-tinted feature panels */
+  --paper-2:  #E5E8FA;  /* deeper indigo wash */
+  --ink:      #12142A;  /* headings — indigo-black, softer than pure black */
+  --ink-soft: #3A3D52;  /* body */
+  --muted:    #6C7086;  /* secondary */
+  --faint:    #A2A6BC; /* tertiary */
+  --hairline: #E8E9F3;  /* cool light border */
+  --hairline-strong: #DADCEB;
 
-  --accent:      #2F6BFF;
-  --accent-hover:#1E55E0;
-  --accent-soft: #EEF3FF;
-  --accent-ring: rgba(47, 107, 255, .18);
+  /* Friendly royal indigo — everything clickable is this colour. */
+  --accent:      #4453D6;
+  --accent-hover:#3341C0;
+  --accent-soft: #ECEEFC;
+  --accent-ring: rgba(68, 83, 214, .20);
 
   --success: #0F9D63;
   --success-soft: #E6F6EE;
@@ -33,6 +38,9 @@
   --warn-soft: #FCF3E3;
   --danger:  #DC2626;
   --danger-soft: #FDECEC;
+
+  --dot: rgba(68, 83, 214, .10);   /* dot-grid ticks */
+  --dot-dark: rgba(255, 255, 255, .10);
 }
 
 * { box-sizing: border-box; }
@@ -124,7 +132,69 @@ h1, h2, h3 { font-family: var(--font-inter-tight), Inter, system-ui, sans-serif;
 
   /* ── Skeleton ──────────────────────────────────────────────────────── */
   .skeleton { @apply rounded-xl bg-[#EFEDE8]; }
+
+  /* ── Editorial / spec-sheet layer ──────────────────────────────────────────
+     The KRAHEJA language: monospace technical micro-labels, dotted engineering
+     grid, oversized display type, and hairline corner brackets. Structure you
+     can read like a blueprint. */
+  .mono-label {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[.22em] text-[--muted];
+  }
+  .mono-label-accent { @apply mono-label text-[--accent]; }
+  .mono-tick { @apply font-mono text-[10.5px] uppercase tracking-[.2em] text-[--faint]; }
+
+  /* Colossal editorial headline — Inter Tight, jammed tracking, black weight. */
+  .display    { @apply font-tight font-extrabold tracking-[-.045em] leading-[.92] text-[--ink]; }
+  .display-xl { @apply display text-[clamp(3rem,9vw,7rem)]; }
+  .display-lg { @apply display text-[clamp(2.4rem,6vw,4.5rem)]; }
+
+  /* Editorial feature panel — warm paper with a dotted engineering grid. */
+  .paper-panel { @apply relative overflow-hidden bg-[--paper]; }
 }
+
+/* ── Dotted engineering grid ──────────────────────────────────────────────── */
+.dot-grid {
+  background-image: radial-gradient(var(--dot) 1.15px, transparent 1.15px);
+  background-size: 22px 22px;
+  background-position: -1px -1px;
+}
+.dot-grid-dark {
+  background-image: radial-gradient(var(--dot-dark) 1.15px, transparent 1.15px);
+  background-size: 22px 22px;
+}
+.dot-grid-fade {
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, #000 55%, transparent 100%);
+}
+
+/* Hairline corner brackets — the technical frame around a value or panel. */
+.bracket { position: relative; }
+.bracket::before, .bracket::after {
+  content: ""; position: absolute; width: 12px; height: 12px;
+  border: 1.5px solid var(--hairline-strong); pointer-events: none;
+}
+.bracket::before { top: 0; left: 0; border-right: 0; border-bottom: 0; }
+.bracket::after  { bottom: 0; right: 0; border-left: 0; border-top: 0; }
+.bracket-accent::before, .bracket-accent::after { border-color: var(--accent); }
+
+/* ── 3D orb-bot animations ────────────────────────────────────────────────── */
+@keyframes orbSpin   { from { transform: rotateY(0deg) }   to { transform: rotateY(360deg) } }
+@keyframes ringSpin  { from { transform: rotateZ(0deg) }   to { transform: rotateZ(360deg) } }
+@keyframes ringSpinR { from { transform: rotateZ(360deg) } to { transform: rotateZ(0deg) } }
+@keyframes orbFloat  { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-14px) } }
+@keyframes orbGlow   { 0%,100% { opacity:.5; transform: scale(1) } 50% { opacity:.85; transform: scale(1.08) } }
+@keyframes botBlink  { 0%,92%,100% { transform: scaleY(1) } 96% { transform: scaleY(.1) } }
+@keyframes botScan   { 0% { transform: translateY(-120%) } 100% { transform: translateY(320%) } }
+@keyframes botLook   { 0%,100% { transform: rotateY(-15deg) rotateX(4deg) } 50% { transform: rotateY(15deg) rotateX(-4deg) } }
+@keyframes eyeDart   { 0%,40%,100% { transform: translateX(0) } 55%,80% { transform: translateX(2.5px) } }
+@keyframes floaty    { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes marqueeX  { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+@keyframes sheenX    { 0% { background-position: -150% 0 } 100% { background-position: 250% 0 } }
+
+.anim-float { animation: floaty 5s ease-in-out infinite; }
+
+/* Indeterminate loader bar — a segment sweeping across the track. */
+@keyframes loadSweep { 0% { transform: translateX(-140%) } 100% { transform: translateX(420%) } }
 
 /* One cheap animation, not two stacked. `pulse` on top of `shimmer` meant every
    placeholder ran two compositor loops at once. */

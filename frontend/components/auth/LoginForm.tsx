@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthLoader } from "@/components/brand/AuthLoader";
 import { FieldError, FieldLabel, SubmitButton } from "@/components/auth/fields";
 import { authInput, safeNext } from "@/components/auth/shared";
 
@@ -42,6 +43,8 @@ export function LoginForm() {
   };
 
   return (
+    <>
+      {isSubmitting && <AuthLoader title="Signing you in" />}
     <AuthShell
       eyebrow="AI Customer Support"
       headline={
@@ -52,7 +55,7 @@ export function LoginForm() {
         </>
       }
       blurb={
-        <p className="m-0 max-w-[400px] text-base leading-relaxed text-[#A1A1AA]">
+        <p className="m-0 max-w-[400px] text-base leading-relaxed text-ink-soft">
           Sign in to your Magnetic workspace to manage conversations, tickets, and your knowledge base.
         </p>
       }
@@ -119,5 +122,6 @@ export function LoginForm() {
         </p>
       </div>
     </AuthShell>
+    </>
   );
 }
