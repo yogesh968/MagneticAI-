@@ -9,7 +9,10 @@ import { jest } from "@jest/globals";
  * asserted here rather than left to notice in production.
  */
 
-const search = jest.fn<any>().mockResolvedValue([]);
+// Return a representative hit: an empty result would send prepareRag down its
+// no-floor last-resort pass and fire a SECOND search, which is a different code
+// path than the single-retrieval behaviour these scoping assertions target.
+const search = jest.fn<any>().mockResolvedValue([{ payload: { text: "context", documentId: "d1" } }]);
 const chat = jest.fn<any>().mockResolvedValue("ok");
 
 jest.unstable_mockModule("../../src/config/qdrant.js", () => ({
@@ -36,6 +39,9 @@ jest.unstable_mockModule("../../src/services/ai/fallback.provider.js", () => ({
 jest.unstable_mockModule("../../src/models/index.js", () => ({
   Bot: { findOne: () => ({ lean: async () => ({ botName: "Billing Bot", personality: "friendly", escalationRules: [] }) }) },
   Tenant: { findById: () => ({ lean: async () => ({ name: "Acme" }) }) },
+  // rag.service imports Document to resolve source names; the mock must export it
+  // or the module fails to link before any test runs.
+  Document: { find: () => ({ select: () => ({ lean: async () => [] }) }) },
 }));
 
 const { answerWithRag } = await import("../../src/services/rag.service.js");
