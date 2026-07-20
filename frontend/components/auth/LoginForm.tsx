@@ -56,7 +56,7 @@ export function LoginForm() {
       }
       blurb={
         <p className="m-0 max-w-[400px] text-base leading-relaxed text-ink-soft">
-          Sign in to your Magnetic workspace to manage conversations, tickets, and your knowledge base.
+          Sign in to your Astrex.ai workspace to manage conversations, tickets, and your knowledge base.
         </p>
       }
       footnotes={["SOC 2 TYPE II", "GDPR", "CCPA"]}
@@ -64,7 +64,7 @@ export function LoginForm() {
       <div className="w-full max-w-[390px]">
         <div className="eyebrow mb-3.5">Welcome back</div>
         <h1 className="m-0 mb-[30px] font-tight text-[34px] font-bold leading-[1.1] tracking-[-.03em] text-ink">
-          Sign in to Magnetic
+          Sign in to Astrex.ai
         </h1>
 
         <form onSubmit={handleSubmit(submit)} noValidate>
@@ -110,7 +110,7 @@ export function LoginForm() {
         </form>
 
         <p className="m-0 mt-[26px] text-center text-sm text-ink-muted">
-          New to Magnetic?{" "}
+          New to Astrex.ai?{" "}
           <Link href="/register" className="font-semibold text-accent-500 hover:text-accent-600">
             Create an account →
           </Link>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { StatCard, PageHeader } from "@/components/ui";
 import {
-  MessageSquare, TicketCheck, TrendingUp, AlertTriangle,
+  MessagesSquare, Inbox, CheckCircle2, Siren, AlertTriangle,
   BookOpen, Activity, Zap,
 } from "lucide-react";
 import {
@@ -76,10 +76,10 @@ export default function AdminStatsPage() {
   }
 
   const stats = overview ? [
-    { label: "Total Conversations", value: overview.totalConversations, icon: <MessageSquare size={18} />, tone: "blue",  sub: "All time" },
-    { label: "Open Tickets",        value: overview.openTickets,        icon: <TicketCheck size={18} />,  tone: "amber", sub: "Pending" },
-    { label: "Resolved Tickets",    value: overview.resolvedTickets,    icon: <TrendingUp size={18} />,   tone: "green", sub: "Closed successfully" },
-    { label: "Escalated",           value: overview.escalated,          icon: <AlertTriangle size={18} />,tone: "red",   sub: "Required human help" },
+    { label: "Total Conversations", value: overview.totalConversations, icon: <MessagesSquare size={18} />, tone: "blue",  sub: "All time" },
+    { label: "Open Tickets",        value: overview.openTickets,        icon: <Inbox size={18} />,  tone: "amber", sub: "Pending" },
+    { label: "Resolved Tickets",    value: overview.resolvedTickets,    icon: <CheckCircle2 size={18} />,   tone: "green", sub: "Closed successfully" },
+    { label: "Escalated",           value: overview.escalated,          icon: <Siren size={18} />,tone: "red",   sub: "Required human help" },
   ] : [];
 
   const summaryTiles = overview ? [

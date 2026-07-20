@@ -25,7 +25,7 @@ export function AuthShell({
   return (
     <main className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
       {/* ── Brand panel ─────────────────────────────────────────────────── */}
-      <div className="paper-panel dot-grid relative hidden flex-col justify-between p-10 xl:p-14 lg:flex">
+      <div className="paper-panel dot-grid relative hidden flex-col justify-between px-10 pb-10 pt-7 xl:px-14 xl:pb-14 xl:pt-9 lg:flex">
         {/* soft accent wash so the paper isn't flat */}
         <div className="pointer-events-none absolute -left-24 top-1/3 h-[420px] w-[420px] rounded-full bg-accent-200/40 blur-3xl" />
         <div className="pointer-events-none absolute right-0 top-0 h-[320px] w-[320px] rounded-full bg-[#D9D2C4]/50 blur-3xl" />
@@ -33,18 +33,18 @@ export function AuthShell({
         {/* top row: mark + spec metadata */}
         <div className="relative z-[2] flex items-start justify-between">
           <Link href="/">
-            <Logo mode="light" size={30} />
+            <Logo mode="light" size={38} />
           </Link>
           <div className="text-right leading-relaxed">
-            <div className="mono-label-accent">Magnetic AI Corp</div>
+            <div className="mono-label-accent">Astrex.ai Corp</div>
             <div className="mono-tick mt-1">Secure Access · 2026</div>
           </div>
         </div>
 
         {/* centre: floating bot + oversized headline */}
         <div className="relative z-[2]">
-          <div className="mb-8 flex justify-start">
-            <OrbBot3D size={188} variant="core" />
+          <div className="mb-7 mt-6 flex justify-start">
+            <OrbBot3D size={150} variant="core" />
           </div>
           <div className="mono-label-accent mb-4">{eyebrow}</div>
           <h2 className="display max-w-[9ch] text-[clamp(2.6rem,6.4vw,5rem)]">{headline}</h2>

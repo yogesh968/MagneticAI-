@@ -105,16 +105,20 @@ export const Avatar = ({ name, size = "md" }: { name: string; size?: "sm" | "md"
 };
 
 /* ── StatCard ───────────────────────────────────────────────────────────── */
-// Restrained metric tile — flat white, hairline border, a single small tinted
-// icon and a hairline accent rail keyed to what the metric means. No gradients,
-// no glow. Whole literal class names so Tailwind's static scan keeps them.
-const STAT_TONE: Record<string, { icon: string; iconBg: string; rail: string }> = {
-  blue:   { icon: "text-accent-600",  iconBg: "bg-accent-50",  rail: "bg-accent-500" },
-  amber:  { icon: "text-amber-600",   iconBg: "bg-amber-50",   rail: "bg-amber-500" },
-  green:  { icon: "text-emerald-600", iconBg: "bg-emerald-50", rail: "bg-emerald-500" },
-  red:    { icon: "text-red-600",     iconBg: "bg-red-50",     rail: "bg-red-500" },
-  neutral:{ icon: "text-ink-soft",    iconBg: "bg-sunken",     rail: "bg-ink" },
-  cyan:   { icon: "text-[#0B7A78]",   iconBg: "bg-[#E4F6F5]",  rail: "bg-[#0B7A78]" },
+// Editorial metric tile — white card that lifts on hover with a soft shadow and
+// a tonal bloom from the corner (replaces the old flat left rail). The metric
+// name is set in the monospace spec-sheet voice; the value is oversized tabular
+// display type. Whole literal class names so Tailwind's static scan keeps them.
+const STAT_TONE: Record<
+  string,
+  { icon: string; iconBg: string; iconBorder: string; dot: string; glow: string }
+> = {
+  blue:    { icon: "text-accent-600",  iconBg: "bg-accent-50",  iconBorder: "border-accent-100",  dot: "bg-accent-500",  glow: "bg-accent-400/25" },
+  amber:   { icon: "text-amber-600",   iconBg: "bg-amber-50",   iconBorder: "border-amber-100",   dot: "bg-amber-500",   glow: "bg-amber-400/25" },
+  green:   { icon: "text-emerald-600", iconBg: "bg-emerald-50", iconBorder: "border-emerald-100", dot: "bg-emerald-500", glow: "bg-emerald-400/25" },
+  red:     { icon: "text-red-600",     iconBg: "bg-red-50",     iconBorder: "border-red-100",     dot: "bg-red-500",     glow: "bg-red-400/25" },
+  neutral: { icon: "text-ink-soft",    iconBg: "bg-sunken",     iconBorder: "border-hairline",    dot: "bg-ink",         glow: "bg-ink/10" },
+  cyan:    { icon: "text-[#0B7A78]",   iconBg: "bg-[#E4F6F5]",  iconBorder: "border-[#CDECEA]",   dot: "bg-[#0B7A78]",   glow: "bg-[#0B7A78]/20" },
 };
 
 export function StatCard({
@@ -131,22 +135,42 @@ export function StatCard({
 }) {
   const t = STAT_TONE[tone] ?? STAT_TONE.blue;
   return (
-    <div className={`group anim-up relative overflow-hidden rounded-xl border border-hairline bg-white p-5 transition-colors duration-150 hover:border-hairline-strong ${delay ?? ""}`}>
-      <span className={`absolute inset-y-0 left-0 w-[3px] ${t.rail} opacity-0 transition-opacity duration-150 group-hover:opacity-100`} />
-      <div className="mb-4 flex items-start justify-between">
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${t.iconBg} ${t.icon}`}>
+    <div
+      className={`group anim-up relative overflow-hidden rounded-2xl border border-hairline bg-white p-5 transition-[transform,border-color,box-shadow] duration-[320ms] ease-[cubic-bezier(.22,.61,.36,1)] [will-change:transform] hover:-translate-y-1.5 hover:border-hairline-strong hover:shadow-[0_22px_50px_-28px_rgba(20,20,42,.6)] ${delay ?? ""}`}
+    >
+      {/* tonal bloom from the top-right corner on hover — no flat rail */}
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full opacity-0 blur-2xl transition-opacity duration-[450ms] ease-out group-hover:opacity-100 ${t.glow}`}
+      />
+
+      <div className="relative mb-5 flex items-start justify-between">
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${t.iconBorder} ${t.iconBg} ${t.icon} transition-transform duration-[320ms] ease-[cubic-bezier(.22,.61,.36,1)] group-hover:scale-110`}
+        >
           {icon}
-        </div>
-        {trendLabel && (
-          <div className={`flex items-center gap-1 text-xs font-semibold ${trend === "up" ? "text-emerald-600" : "text-red-500"}`}>
+        </span>
+        {trendLabel ? (
+          <span
+            className={`flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ${
+              trend === "up" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
+            }`}
+          >
             {trend === "up" ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {trendLabel}
-          </div>
+          </span>
+        ) : (
+          <span className={`mt-1.5 h-1.5 w-1.5 rounded-full opacity-60 ${t.dot}`} />
         )}
       </div>
-      <p className="font-tight text-[28px] font-bold leading-none tracking-[-.02em] text-ink tabular-nums">{value}</p>
-      <p className="mt-2.5 text-[13px] font-medium text-ink-soft">{label}</p>
-      {sub && <p className="mt-0.5 text-xs text-ink-muted">{sub}</p>}
+
+      <p className="relative font-tight text-[32px] font-extrabold leading-none tracking-[-.03em] text-ink tabular-nums">
+        {value}
+      </p>
+      <p className="relative mt-2.5 font-mono text-[10.5px] font-medium uppercase tracking-[.16em] text-ink-muted">
+        {label}
+      </p>
+      {sub && <p className="relative mt-1.5 text-xs text-ink-muted">{sub}</p>}
     </div>
   );
 }

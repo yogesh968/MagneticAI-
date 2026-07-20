@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { api, readSessionHint } from "@/lib/api";
 import { StatCard, Badge } from "@/components/ui";
 import {
-  MessageSquare, TicketCheck, TrendingUp, AlertTriangle,
+  MessageSquare, TicketCheck, AlertTriangle,
+  MessagesSquare, Inbox, Siren, CheckCircle2,
   ArrowRight, Bot, Clock, BookOpen, Zap, Activity,
   Headphones, Users, BarChart3, Code2,
 } from "lucide-react";
@@ -85,10 +86,10 @@ function CommandHero({
 // ─── Agent home view ──────────────────────────────────────────────────────────
 function AgentDashboard({ overview, recentTickets, userName, router }: any) {
   const agentStats = [
-    { label: "Open Tickets",   value: overview.openTickets,     icon: <TicketCheck size={18} />, tone: "amber", delay: "d1", sub: "Needs your attention" },
-    { label: "Escalated",      value: overview.escalated,       icon: <AlertTriangle size={18} />, tone: "red",   delay: "d2", sub: "High priority" },
-    { label: "Conversations",  value: overview.totalConversations, icon: <MessageSquare size={18} />, tone: "blue", delay: "d3", sub: "All sessions" },
-    { label: "Resolved",       value: overview.resolvedTickets, icon: <TrendingUp size={18} />,  tone: "green", delay: "d4", sub: "Closed successfully" },
+    { label: "Open Tickets",   value: overview.openTickets,     icon: <Inbox size={18} />, tone: "amber", delay: "d1", sub: "Needs your attention" },
+    { label: "Escalated",      value: overview.escalated,       icon: <Siren size={18} />, tone: "red",   delay: "d2", sub: "High priority" },
+    { label: "Conversations",  value: overview.totalConversations, icon: <MessagesSquare size={18} />, tone: "blue", delay: "d3", sub: "All sessions" },
+    { label: "Resolved",       value: overview.resolvedTickets, icon: <CheckCircle2 size={18} />,  tone: "green", delay: "d4", sub: "Closed successfully" },
   ];
 
   const quickActions = [
@@ -198,10 +199,10 @@ function AgentDashboard({ overview, recentTickets, userName, router }: any) {
 // ─── Admin home view ──────────────────────────────────────────────────────────
 function AdminDashboard({ overview, charts, recentTickets, userName, router }: any) {
   const adminStats = [
-    { label: "Conversations",  value: overview.totalConversations, icon: <MessageSquare size={18} />, tone: "blue",  delay: "d1", sub: "All time" },
-    { label: "Open Tickets",   value: overview.openTickets,        icon: <TicketCheck size={18} />,  tone: "amber", delay: "d2", sub: "Awaiting action" },
-    { label: "Resolved",       value: overview.resolvedTickets,    icon: <TrendingUp size={18} />,   tone: "green", delay: "d3", sub: "Successfully closed" },
-    { label: "Escalated",      value: overview.escalated,          icon: <AlertTriangle size={18} />,tone: "red",   delay: "d4", sub: "Auto-escalated" },
+    { label: "Conversations",  value: overview.totalConversations, icon: <MessagesSquare size={18} />, tone: "blue",  delay: "d1", sub: "All time" },
+    { label: "Open Tickets",   value: overview.openTickets,        icon: <Inbox size={18} />,  tone: "amber", delay: "d2", sub: "Awaiting action" },
+    { label: "Resolved",       value: overview.resolvedTickets,    icon: <CheckCircle2 size={18} />,   tone: "green", delay: "d3", sub: "Successfully closed" },
+    { label: "Escalated",      value: overview.escalated,          icon: <Siren size={18} />,tone: "red",   delay: "d4", sub: "Auto-escalated" },
   ];
 
   const adminLinks = [

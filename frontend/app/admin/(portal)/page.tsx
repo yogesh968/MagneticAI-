@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { api, readSessionHint } from "@/lib/api";
 import { StatCard } from "@/components/ui";
 import {
-  Building2, Users, MessageSquare, TicketCheck,
-  TrendingUp, Activity, ArrowRight, Globe, ShieldCheck,
+  Building2, Users, MessagesSquare, Inbox,
+  CheckCircle2, Siren, Activity, ArrowRight, Globe, ShieldCheck,
   Bot, Database,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -74,10 +74,10 @@ export default function AdminOverviewPage() {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   const stats = overview ? [
-    { label: "Total Conversations", value: overview.totalConversations, icon: <MessageSquare size={18} />, tone: "blue", sub: "All tenants" },
-    { label: "Open Tickets",        value: overview.openTickets,        icon: <TicketCheck size={18} />,  tone: "amber", sub: "Awaiting action" },
-    { label: "Resolved",            value: overview.resolvedTickets,    icon: <TrendingUp size={18} />,   tone: "green", sub: "Successfully closed" },
-    { label: "Escalated",           value: overview.escalated,          icon: <Activity size={18} />,     tone: "red", sub: "Auto-escalated" },
+    { label: "Total Conversations", value: overview.totalConversations, icon: <MessagesSquare size={18} />, tone: "blue", sub: "All tenants" },
+    { label: "Open Tickets",        value: overview.openTickets,        icon: <Inbox size={18} />,  tone: "amber", sub: "Awaiting action" },
+    { label: "Resolved",            value: overview.resolvedTickets,    icon: <CheckCircle2 size={18} />,   tone: "green", sub: "Successfully closed" },
+    { label: "Escalated",           value: overview.escalated,          icon: <Siren size={18} />,     tone: "red", sub: "Auto-escalated" },
   ] : [];
 
   const quickLinks = [
