@@ -48,27 +48,31 @@ const fallbackProvider = new FallbackProvider();
 async function callProviderWithFallback(
   messages: ChatMessage[],
   stream: false,
+  maxTokens?: number,
 ): Promise<string>;
 async function callProviderWithFallback(
   messages: ChatMessage[],
   stream: true,
+  maxTokens?: number,
 ): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>>;
 async function callProviderWithFallback(
   messages: ChatMessage[],
   stream: boolean,
+  maxTokens?: number,
 ): Promise<any> {
+  const opts = maxTokens ? { maxTokens } : {};
   try {
     if (stream) {
-      return await primaryProvider.streamChat(messages);
+      return await primaryProvider.streamChat(messages, opts);
     }
-    return await primaryProvider.chat(messages);
+    return await primaryProvider.chat(messages, opts);
   } catch (err: any) {
     console.error("[rag] Primary AI provider failed, falling back:", err?.message || err);
     try {
       if (stream) {
-        return await fallbackProvider.streamChat(messages);
+        return await fallbackProvider.streamChat(messages, opts);
       }
-      return await fallbackProvider.chat(messages);
+      return await fallbackProvider.chat(messages, opts);
     } catch (fallbackErr: any) {
       console.error("[rag] Fallback AI provider also failed:", fallbackErr?.message || fallbackErr);
       throw new Error("Both primary and fallback AI providers failed.");
@@ -120,6 +124,21 @@ async function getPersona({ tenantId, botId }: RagTarget) {
 }
 
 /**
+ * Whether the user is explicitly asking to be told more — "explain", "in
+ * detail", "elaborate", "walk me through", "tell me more". Left to itself the
+ * default house style keeps every answer terse, so a customer who asks for a
+ * thorough breakdown still gets one clipped sentence (the exact complaint this
+ * detection fixes). The cues are kept tight so a normal question is unaffected.
+ */
+const DETAIL_CUES =
+  /\b(explain|elaborat\w*|in[-\s]?depth|more detail|in detail|thorough\w*|breakdown|break it down|step[-\s]?by[-\s]?step|walk me through|comprehensive|tell me more|expand on|everything about|full (?:details|breakdown)|why does|how does)\b/i;
+export const wantsDetail = (query: string) => DETAIL_CUES.test(query);
+
+/** Token ceilings: terse by default, roomier when the user asked for detail. */
+const BRIEF_MAX_TOKENS = 400;
+const DETAIL_MAX_TOKENS = 900;
+
+/**
  * The house style, shared by the with-context and no-context prompts.
  *
  * This is deliberately prescriptive. Left to itself the model writes essays:
@@ -127,8 +146,21 @@ async function getPersona({ tenantId, botId }: RagTarget) {
  * were never a list. In a 380px chat panel that reads as a wall of text and
  * nobody scrolls it, so brevity here is a product requirement, not a token
  * optimisation.
+ *
+ * When the user explicitly asks for detail, that calculus flips: a clipped
+ * one-liner is now the wrong answer, so the style switches to a fuller,
+ * structured reply — still grounded, still no filler, just allowed to breathe.
  */
-const STYLE = `HOW TO ANSWER
+const style = (detail: boolean) =>
+  detail
+    ? `HOW TO ANSWER
+- The user asked for detail, so give a thorough, well-structured answer — do not clip it to one line.
+- Lead with the direct answer, then cover the relevant specifics fully. Aim for roughly 120–220 words.
+- Group related points. Use a bullet list for three or more parallel items, and a numbered list for sequential steps.
+- Ground every claim in what you actually know; asking for detail is not licence to invent facts, numbers, or policies.
+- No markdown headings — this renders in a chat panel, not a document.
+- Plain language. No preamble, no "Great question", no corporate filler, no closing sales pitch.`
+    : `HOW TO ANSWER
 - Lead with the answer in the very first sentence. No preamble, no "Great question", no restating what was asked.
 - Stay under 60 words unless the answer genuinely needs steps.
 - Numbered list ONLY for sequential steps the user must perform, in order.
@@ -137,7 +169,7 @@ const STYLE = `HOW TO ANSWER
 - Plain language. No corporate filler, no "feel free to", no closing sales pitch.
 - On a follow-up, answer only what was just asked; do not repeat what you already said.`;
 
-async function prepareRag(target: RagTarget, query: string, history: RagHistory = []) {
+async function prepareRag(target: RagTarget, query: string, history: RagHistory = [], detail = false) {
   const [vector, { config, tenant }] = await Promise.all([
     embedQuery(query),
     getPersona(target),
@@ -151,7 +183,7 @@ async function prepareRag(target: RagTarget, query: string, history: RagHistory 
   // business-specific claim would be invention, so refuse those outright.
   const generalSystem = `You are ${botName}, a ${personality} customer support assistant for ${bizName}.
 
-${STYLE}
+${style(detail)}
 
 WHAT YOU KNOW
 - You have no knowledge base context for this question.
@@ -241,7 +273,7 @@ WHAT YOU KNOW
 
   const system = `You are ${botName}, a ${personality} customer support assistant for ${bizName}.
 
-${STYLE}
+${style(detail)}
 
 GROUNDING
 - Answer business questions using ONLY the knowledge base context below. It is the entire truth available to you.
@@ -266,8 +298,10 @@ const buildMessages = (system: string, history: RagHistory, query: string): Chat
 ];
 
 export async function answerWithRag(target: RagTarget, query: string, history: RagHistory = []): Promise<RagResult> {
-  const rag = await prepareRag(target, query, history);
-  const answer = await callProviderWithFallback(buildMessages(rag.system, history, query), false);
+  const detail = wantsDetail(query);
+  const rag = await prepareRag(target, query, history, detail);
+  const maxTokens = detail ? DETAIL_MAX_TOKENS : BRIEF_MAX_TOKENS;
+  const answer = await callProviderWithFallback(buildMessages(rag.system, history, query), false, maxTokens);
   const cited = declined(answer) ? [] : rag.sources;
   return { answer, hasContext: rag.hasContext, documentsReferenced: rag.documentsReferenced, sources: cited };
 }
@@ -278,8 +312,10 @@ export async function streamAnswerWithRag(
   onToken: (token: string) => void,
   history: RagHistory = [],
 ): Promise<RagResult> {
-  const rag = await prepareRag(target, query, history);
-  const stream = await callProviderWithFallback(buildMessages(rag.system, history, query), true);
+  const detail = wantsDetail(query);
+  const rag = await prepareRag(target, query, history, detail);
+  const maxTokens = detail ? DETAIL_MAX_TOKENS : BRIEF_MAX_TOKENS;
+  const stream = await callProviderWithFallback(buildMessages(rag.system, history, query), true, maxTokens);
   let answer = "";
   for await (const part of stream) {
     const token = part.choices[0]?.delta?.content ?? "";

@@ -3,7 +3,13 @@ export interface ChatMessage {
   content: string;
 }
 
+/** Per-call knobs. `maxTokens` lets a detail-seeking turn ask for more room
+ * than the terse default without changing the provider's own retry logic. */
+export interface ChatOptions {
+  maxTokens?: number;
+}
+
 export interface AIProvider {
-  chat(messages: ChatMessage[], attempt?: number): Promise<string>;
-  streamChat(messages: ChatMessage[], attempt?: number): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>>;
+  chat(messages: ChatMessage[], opts?: ChatOptions): Promise<string>;
+  streamChat(messages: ChatMessage[], opts?: ChatOptions): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>>;
 }
