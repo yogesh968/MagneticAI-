@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import { NavProgress } from "@/components/brand/NavProgress";
 import "./globals.css";
 
 // Self-hosted at build time: no render-blocking round trip to Google, and no
@@ -11,7 +12,7 @@ const interTight = Inter_Tight({ subsets: ["latin"], display: "swap", variable: 
 const jetBrainsMono = JetBrains_Mono({ subsets: ["latin"], display: "swap", variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: { default: "Magentic AI", template: "%s · Magentic AI" },
+  title: { default: "Astrex.ai", template: "%s · Astrex.ai" },
   description: "AI-powered multi-tenant customer support platform",
 };
 
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`h-full ${inter.variable} ${interTight.variable} ${jetBrainsMono.variable}`}>
       <body className="h-full">
+        <NavProgress />
         <Toaster
           position="top-right"
           toastOptions={{

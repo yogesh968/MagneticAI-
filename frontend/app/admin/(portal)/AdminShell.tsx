@@ -1,11 +1,15 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard, Users, Building2, BarChart3,
-  ShieldCheck, LogOut, ChevronRight, Settings,
+  ShieldCheck, LogOut, ChevronRight, Settings, Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { startNavProgress } from "@/components/brand/NavProgress";
+import { LogoutDialog } from "@/components/brand/LogoutDialog";
+import { AuthLoader } from "@/components/brand/AuthLoader";
 
 const NAV = [
   { href: "/admin",         label: "Overview",      icon: LayoutDashboard, exact: true },
@@ -24,8 +28,14 @@ export type AdminUser = { name: string; role: string };
 export default function AdminShell({ user, children }: { user: AdminUser; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const logout = async () => {
+  const doLogout = async () => {
+    if (loggingOut) return;
+    setConfirmLogout(false);
+    setLoggingOut(true);
+    startNavProgress();
     await api.post("/auth/logout").catch(() => {});
     router.replace("/admin/login");
     router.refresh();
@@ -38,6 +48,20 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
 
   return (
     <div className="flex h-full bg-[#0A0A0B]">
+      <LogoutDialog
+        open={confirmLogout && !loggingOut}
+        user={user}
+        onCancel={() => setConfirmLogout(false)}
+        onConfirm={doLogout}
+      />
+      {loggingOut && (
+        <AuthLoader
+          title="Signing you out"
+          variant="swarm"
+          steps={["Closing your session", "Clearing credentials", "See you soon"]}
+        />
+      )}
+
       {/* Dark sidebar — matches DashboardShell's dark surface treatment */}
       <aside className="flex w-60 shrink-0 flex-col border-r border-[#1C1C20] bg-[#0A0A0B]">
         {/* Logo */}
@@ -47,7 +71,7 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
           </div>
           <div>
             <p className="text-[14px] font-bold text-white leading-none">Admin Portal</p>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8A8A8F] mt-0.5">Magentic AI</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8A8A8F] mt-0.5">Astrex.ai</p>
           </div>
         </div>
 
@@ -75,7 +99,7 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
 
         {/* User footer */}
         <div className="border-t border-[#1C1C20] p-3">
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent-500 to-accent-700 text-xs font-bold text-white">
               {user.name?.[0]?.toUpperCase()}
             </div>
@@ -83,10 +107,26 @@ export default function AdminShell({ user, children }: { user: AdminUser; childr
               <p className="truncate text-[13px] font-semibold text-white">{user.name}</p>
               <p className="truncate text-[11px] text-[#71717A] capitalize">{user.role}</p>
             </div>
-            <button onClick={logout} title="Sign out" className="text-[#71717A] hover:text-red-400 transition-colors">
-              <LogOut size={14} />
-            </button>
           </div>
+
+          <button
+            onClick={() => setConfirmLogout(true)}
+            disabled={loggingOut}
+            aria-label="Sign out"
+            className="group/logout mt-1 flex w-full items-center justify-center gap-2.5 rounded-2xl border border-white/10 bg-white/[.04] px-4 py-2.5 text-[14px] font-semibold text-white transition-all duration-200 hover:border-red-500/60 hover:bg-white/[.07] hover:shadow-[0_10px_24px_-10px_rgba(220,38,38,.6)] active:scale-[.985] disabled:opacity-60"
+          >
+            {loggingOut ? (
+              <>
+                <Loader2 size={16} className="animate-spin text-red-400" />
+                Signing out…
+              </>
+            ) : (
+              <>
+                <LogOut size={16} className="text-red-400 transition-transform duration-200 group-hover/logout:translate-x-0.5" />
+                Log out
+              </>
+            )}
+          </button>
         </div>
       </aside>
 

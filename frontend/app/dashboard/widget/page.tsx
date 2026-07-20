@@ -56,7 +56,7 @@ function WidgetClient() {
   };
 
   // Each bot gets its own embed — data-bot-id is what picks which bot answers.
-  const snippet = `<!-- Magentic AI — ${selected?.botName ?? "Bot"} -->\n<script src="${API_URL}/widget.js" data-bot-id="${botId ?? ""}"></script>`;
+  const snippet = `<!-- Astrex.ai — ${selected?.botName ?? "Bot"} -->\n<script src="${API_URL}/widget.js" data-bot-id="${botId ?? ""}"></script>`;
 
   const copySnippet = async () => {
     await navigator.clipboard.writeText(snippet);

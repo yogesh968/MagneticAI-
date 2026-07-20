@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, MessageSquare, Code2, ArrowRight, ArrowUpRight, Shield, Bot, BarChart3, Activity } from "lucide-react";
+import { LayoutDashboard, MessageSquare, Code2, ArrowRight, ArrowUpRight, Shield, Bot, BarChart3 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { OrbBot3D } from "@/components/brand/OrbBot3D";
 
@@ -21,8 +21,8 @@ const ACCESS = [
   {
     idx: "02",
     eyebrow: "Backend API",
-    title: "Express + Socket.io",
-    desc: "REST API with JWT auth, RAG engine, Qdrant vector search and websockets.",
+    title: "Secure & Real-time",
+    desc: "Authenticated REST API with a built-in RAG engine, vector search and live websockets.",
     code: `${API_URL}/health`,
     href: `${API_URL}/health`,
     cta: "Check API status",
@@ -43,17 +43,10 @@ const ACCESS = [
 ];
 
 const FEATURES = [
-  { icon: Bot, label: "RAG Answers", desc: "Groq llama-3.3-70b + Cohere embeddings" },
-  { icon: Shield, label: "Auto Escalation", desc: "Keyword-based ticket creation" },
-  { icon: MessageSquare, label: "Real-time Chat", desc: "Socket.io human handoff" },
+  { icon: Bot, label: "RAG Answers", desc: "Grounded replies from your knowledge base" },
+  { icon: Shield, label: "Auto Escalation", desc: "Smart ticket creation when it matters" },
+  { icon: MessageSquare, label: "Real-time Chat", desc: "Instant replies with human handoff" },
   { icon: BarChart3, label: "Analytics", desc: "30-day trends & resolution rate" },
-];
-
-const STACK: [string, string][] = [
-  ["Frontend", "Next.js 14 · TypeScript · Tailwind"],
-  ["Backend", "Node.js · Express · Socket.io"],
-  ["AI", "Groq llama-3.3-70b · Cohere embed"],
-  ["Data", "MongoDB Atlas · Qdrant Cloud"],
 ];
 
 export default function LandingPage() {
@@ -65,12 +58,11 @@ export default function LandingPage() {
         <div className="absolute -bottom-40 -left-40 h-[460px] w-[460px] rounded-full bg-[#D9D2C4]/50 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6">
+      <div className="relative w-full px-6 sm:px-10 lg:px-16 xl:px-20">
         {/* ── Top bar ─────────────────────────────────────────────────── */}
         <header className="flex items-center justify-between py-7">
-          <Logo mode="light" size={30} />
+          <Logo mode="light" size={40} />
           <div className="hidden items-center gap-6 sm:flex">
-            <span className="mono-tick">◆ Property Index · 2026</span>
             <Link href="/login" className="btn-ink btn-sm gap-1.5">
               Sign in <ArrowUpRight size={13} />
             </Link>
@@ -78,7 +70,7 @@ export default function LandingPage() {
         </header>
 
         {/* ── Hero ────────────────────────────────────────────────────── */}
-        <section className="grid items-center gap-10 pb-6 pt-10 lg:grid-cols-[1.1fr_.9fr] lg:pt-16">
+        <section className="grid items-center gap-10 pb-12 pt-8 lg:min-h-[calc(100vh-104px)] lg:grid-cols-[1.05fr_.95fr] lg:gap-6 lg:pb-16 lg:pt-4">
           <div className="anim-up">
             <div className="mono-label-accent mb-6">AI Customer Support · Platform</div>
             <h1 className="display text-[clamp(3rem,8.5vw,6.5rem)]">
@@ -119,17 +111,10 @@ export default function LandingPage() {
           </div>
 
           {/* Bot stage */}
-          <div className="anim-scale relative flex items-center justify-center">
-            <div className="paper-panel dot-grid dot-grid-fade bracket relative flex aspect-square w-full max-w-[420px] items-center justify-center rounded-3xl border border-hairline-strong shadow-card-lg">
-              <div className="absolute left-4 top-4 mono-tick">◆ Unit · MG-01</div>
-              <div className="absolute right-4 top-4 flex items-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-success anim-dot" />
-                <span className="mono-tick">Online</span>
-              </div>
-              <OrbBot3D size={288} variant="wire" />
-              <div className="absolute bottom-4 left-4 mono-tick">Magnetic Assistant</div>
-              <div className="absolute bottom-4 right-4 mono-tick">v2026.7</div>
-            </div>
+          <div className="anim-scale relative flex h-full min-h-[360px] items-center justify-center">
+            {/* soft glow so the orb anchors the whole right column */}
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[460px] w-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-200/40 blur-3xl" />
+            <OrbBot3D size={360} variant="wire" className="relative" />
           </div>
         </section>
 
@@ -188,27 +173,24 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Tech stack ──────────────────────────────────────────────── */}
-        <section className="mt-14">
-          <div className="paper-panel dot-grid rounded-2xl border border-hairline-strong p-7">
-            <div className="mb-5 flex items-center gap-2">
-              <Activity size={14} className="text-accent-600" />
-              <span className="mono-label-accent">Tech Stack</span>
-            </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {STACK.map(([layer, tech]) => (
-                <div key={layer} className="rounded-xl border border-hairline bg-surface/80 px-4 py-3.5">
-                  <p className="mono-tick mb-1.5">{layer}</p>
-                  <p className="text-[13px] font-medium leading-snug text-ink-soft">{tech}</p>
-                </div>
-              ))}
+        <footer className="mt-20 border-t border-hairline-strong pb-12 pt-9">
+          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row sm:items-center">
+            <Logo mode="light" size={32} />
+            <div className="flex flex-wrap items-center justify-center gap-x-7 gap-y-2">
+              <Link href="/admin/login" className="text-sm font-medium text-ink-soft transition-colors hover:text-accent-600">
+                Dashboard
+              </Link>
+              <Link href="/widget-demo" className="text-sm font-medium text-ink-soft transition-colors hover:text-accent-600">
+                Widget Demo
+              </Link>
+              <Link href="/login" className="text-sm font-medium text-ink-soft transition-colors hover:text-accent-600">
+                Sign in
+              </Link>
             </div>
           </div>
-        </section>
-
-        <footer className="mt-16 flex flex-col items-center gap-2 border-t border-hairline pb-12 pt-8 text-center">
-          <Logo mode="light" size={24} />
-          <p className="mono-tick mt-2">Magnetic AI · Support Platform · 2026 Edition</p>
+          <p className="mt-7 text-center text-sm text-ink-muted sm:text-left">
+            © 2026 Astrex.ai · AI Customer Support Platform
+          </p>
         </footer>
       </div>
     </main>

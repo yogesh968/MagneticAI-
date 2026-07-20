@@ -172,7 +172,13 @@
    * returned element is still the bubble itself — the streaming code writes
    * tokens straight into it.
    */
-  function addMsg(text, cls) {
+  /** Clock time like "11:10 AM". Falls back to now when no timestamp is given. */
+  function fmtTime(d) {
+    const t = d ? new Date(d) : new Date();
+    return isNaN(t.getTime()) ? "" : t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function addMsg(text, cls, time) {
     const row = document.createElement("div");
     row.className = "row " + cls;
 
@@ -184,7 +190,7 @@
     if (cls === "bot") {
       const meta = document.createElement("div");
       meta.className = "meta";
-      meta.textContent = `${config?.botName ?? "Assistant"} • ${isHumanActive ? "Agent" : "AI Agent"} • Just now`;
+      meta.textContent = `${config?.botName ?? "Assistant"} • ${isHumanActive ? "Agent" : "AI Agent"} • ${fmtTime(time)}`;
       row.appendChild(meta);
     }
 
@@ -339,7 +345,7 @@
       if (!typingRow.querySelector(".meta")) {
         const meta = document.createElement("div");
         meta.className = "meta";
-        meta.textContent = `${config?.botName ?? "Assistant"} • AI Agent • Just now`;
+        meta.textContent = `${config?.botName ?? "Assistant"} • AI Agent • ${fmtTime()}`;
         typingRow.appendChild(meta);
       }
     };
@@ -392,7 +398,6 @@
               scrollBottom();
             }
             if (eventLine === "done") {
-              addSources(typingEl, data.message?.metadata?.sources);
               if (data.ticket) showTicketForm();
               if (data.message?.conversationId) {
                 const newConvId = data.message.conversationId;
@@ -442,7 +447,7 @@
           const banner = $(".handoff-banner");
           if (banner) banner.style.display = "flex";
         }
-        if (msg.role === "assistant") addMsg(msg.content, "bot");
+        if (msg.role === "assistant") addMsg(msg.content, "bot", msg.createdAt);
         if (msg.role === "system")    addMsg(msg.content, "system");
       });
       socket.on("handoff:active", ({ agentName }) => {
@@ -845,7 +850,7 @@
               <p>${esc(cfg.welcomeMessage || "How can I help?")}</p>
             </div>
           </div>
-          <small>${esc(cfg.botName)} • Just now</small>
+          <small>${esc(cfg.botName)} • ${fmtTime()}</small>
         </div>
         <div class="teaser-chips"></div>
       </div>
@@ -984,7 +989,7 @@
             if (prevMsgs.length > 0) {
               // Replace the welcome message with the real history
               msgs().innerHTML = "";
-              prevMsgs.forEach((m) => addMsg(m.content, m.role === "user" ? "user" : "bot"));
+              prevMsgs.forEach((m) => addMsg(m.content, m.role === "user" ? "user" : "bot", m.createdAt));
             }
           } else {
             clearSession();

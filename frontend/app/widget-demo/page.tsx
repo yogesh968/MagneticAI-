@@ -57,7 +57,7 @@ export default function WidgetDemoPage() {
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight">Live Widget Demo</h1>
           <p className="mt-3 text-ink-faint max-w-md mx-auto">
-            The chat widget below is powered by your Magentic AI backend.
+            The chat widget below is powered by your Astrex.ai backend.
             Click the chat icon in the bottom-right corner to test it.
           </p>
         </div>

@@ -6,7 +6,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { BarChart3, FileText, TrendingUp, AlertTriangle, MessageSquare } from "lucide-react";
+import { BarChart3, Library, Gauge, Siren, MessagesSquare } from "lucide-react";
 import toast from "react-hot-toast";
 
 // Recharts takes props, not classes — these are the literal token hex values
@@ -77,10 +77,10 @@ export default function AnalyticsPage() {
       {/* Stat row */}
       {overview && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Conversations (30d)" value={conv30}           icon={<MessageSquare size={20} />} tone="blue"   delay="d1" />
-          <StatCard label="Escalations (30d)"   value={esc30}            icon={<AlertTriangle size={20} />} tone="red"    delay="d2" />
-          <StatCard label="KB Documents"         value={kb?.documents?.length ?? 0} icon={<FileText size={20} />}  tone="neutral" delay="d3" />
-          <StatCard label="Resolution Rate"      value={`${overview.resolutionRate}%`} icon={<TrendingUp size={20} />} tone="green"  delay="d4" />
+          <StatCard label="Conversations (30d)" value={conv30}           icon={<MessagesSquare size={20} />} tone="blue"   delay="d1" />
+          <StatCard label="Escalations (30d)"   value={esc30}            icon={<Siren size={20} />} tone="red"    delay="d2" />
+          <StatCard label="KB Documents"         value={kb?.documents?.length ?? 0} icon={<Library size={20} />}  tone="neutral" delay="d3" />
+          <StatCard label="Resolution Rate"      value={`${overview.resolutionRate}%`} icon={<Gauge size={20} />} tone="green"  delay="d4" />
         </div>
       )}
 

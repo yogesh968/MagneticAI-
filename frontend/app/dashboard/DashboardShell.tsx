@@ -5,10 +5,13 @@ import { useEffect, useState } from "react";
 import {
   BarChart3, BookOpen, Bot, LogOut, MessageSquare, TicketCheck,
   AlertTriangle, LayoutDashboard, ChevronRight, Bell, Code2, Plug,
-  Users, X, Menu, Search,
+  Users, X, Menu, Search, Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Logo } from "@/components/brand/Logo";
+import { startNavProgress } from "@/components/brand/NavProgress";
+import { LogoutDialog } from "@/components/brand/LogoutDialog";
+import { AuthLoader } from "@/components/brand/AuthLoader";
 import { matches, navFor, type Role } from "@/lib/routes";
 
 const ICONS: Record<string, typeof LayoutDashboard> = {
@@ -47,6 +50,8 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
   const router = useRouter();
   const [openTickets, setOpenTickets] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // Once per mount, not per navigation: the badge is ambient, and refetching it
   // on every route change duplicated a request each screen already makes.
@@ -56,12 +61,22 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  const logout = async () => {
+  const doLogout = async () => {
+    if (loggingOut) return;
+    setConfirmLogout(false);
+    setLoggingOut(true);
+    startNavProgress();
     // Revokes server-side (bumps tokenVersion) and clears the httpOnly cookies;
     // a client-side clear alone could not do either.
     await api.post("/auth/logout").catch(() => {});
     router.replace("/login");
     router.refresh();
+  };
+
+  // Programmatic jumps (search / bell) get the same top-bar feedback as links.
+  const go = (href: string) => {
+    startNavProgress();
+    router.push(href);
   };
 
   const nav = navFor(user.role);
@@ -77,7 +92,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
     <div className="flex h-full flex-col bg-white">
       <div className="flex items-center justify-between border-b border-hairline px-[22px] pb-[18px] pt-[22px]">
         <Link href="/dashboard">
-          <Logo mode="light" size={28} />
+          <Logo mode="light" size={34} />
         </Link>
         <button onClick={() => setMobileOpen(false)} className="rounded-lg p-1 text-ink-faint hover:text-ink md:hidden">
           <X size={16} />
@@ -134,20 +149,46 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
             <div className="truncate text-[13.5px] font-semibold text-ink">{user.name}</div>
             <div className="text-[11px] font-medium text-ink-muted">{ROLE_LABEL[user.role]}</div>
           </div>
-          <button
-            onClick={logout}
-            title="Sign out"
-            className="flex-none rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-white hover:text-red-500"
-          >
-            <LogOut size={15} />
-          </button>
         </div>
+
+        <button
+          onClick={() => setConfirmLogout(true)}
+          disabled={loggingOut}
+          aria-label="Sign out"
+          className="group/logout mt-2 flex w-full items-center justify-center gap-2.5 rounded-2xl border border-[#2A2E3D] bg-[#181B26] px-4 py-2.5 text-[14px] font-semibold text-white shadow-[0_2px_10px_-4px_rgba(18,20,42,.35)] transition-all duration-200 hover:border-red-500/60 hover:bg-[#1E2130] hover:shadow-[0_10px_24px_-10px_rgba(220,38,38,.55)] active:scale-[.985] disabled:opacity-60"
+        >
+          {loggingOut ? (
+            <>
+              <Loader2 size={16} className="animate-spin text-red-400" />
+              Signing out…
+            </>
+          ) : (
+            <>
+              <LogOut size={16} className="text-red-400 transition-transform duration-200 group-hover/logout:translate-x-0.5" />
+              Log out
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
 
   return (
     <div className="flex min-h-screen bg-canvas">
+      <LogoutDialog
+        open={confirmLogout && !loggingOut}
+        user={user}
+        onCancel={() => setConfirmLogout(false)}
+        onConfirm={doLogout}
+      />
+      {loggingOut && (
+        <AuthLoader
+          title="Signing you out"
+          variant="swarm"
+          steps={["Closing your session", "Clearing credentials", "See you soon"]}
+        />
+      )}
+
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] border-r border-hairline md:block">
         <SidebarContent />
       </aside>
@@ -181,7 +222,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
           {/* Design shows a global search here; there is no search endpoint yet, so
               this navigates to conversations, which is the only searchable list. */}
           <button
-            onClick={() => router.push("/dashboard/conversations")}
+            onClick={() => go("/dashboard/conversations")}
             className="ml-auto hidden items-center gap-2.5 rounded-[11px] border border-hairline bg-white px-3.5 py-2 text-sm text-ink-muted transition-colors hover:border-hairline-strong lg:flex lg:w-[280px]"
           >
             <Search size={16} strokeWidth={2} />
@@ -191,7 +232,7 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
           <div className="ml-auto flex items-center gap-2.5 lg:ml-0">
             {openTickets > 0 && (
               <button
-                onClick={() => router.push("/dashboard/escalations")}
+                onClick={() => go("/dashboard/escalations")}
                 title={`${openTickets} open ticket${openTickets === 1 ? "" : "s"}`}
                 className="relative flex h-10 w-10 items-center justify-center rounded-[11px] border border-hairline bg-white text-ink-soft transition-colors hover:border-hairline-strong"
               >
@@ -199,9 +240,16 @@ export default function DashboardShell({ user, children }: { user: ShellUser; ch
                 <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-canvas bg-accent-500" />
               </button>
             )}
-            <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] bg-gradient-to-br from-accent-500 to-accent-700 font-tight text-sm font-bold text-white">
-              {initials}
-            </span>
+            <div className="flex items-center gap-2.5 rounded-[13px] border border-hairline bg-white/70 py-1 pl-1 pr-3 shadow-[0_1px_2px_rgba(18,20,42,.05)]">
+              <span className="relative flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] bg-gradient-to-br from-accent-500 to-accent-700 font-tight text-[13px] font-bold text-white shadow-accent">
+                {initials}
+                <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
+              </span>
+              <span className="hidden leading-tight sm:block">
+                <span className="block max-w-[120px] truncate text-[13px] font-semibold text-ink">{user.name}</span>
+                <span className="mono-tick block">{ROLE_LABEL[user.role]}</span>
+              </span>
+            </div>
           </div>
         </header>
 

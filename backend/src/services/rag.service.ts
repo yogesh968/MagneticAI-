@@ -165,21 +165,28 @@ WHAT YOU KNOW
   // Search this bot's slice of the tenant's KB. The collection is per-tenant, so
   // the botId filter is what keeps one bot from answering out of another's
   // documents — without it every bot in a tenant shares a single knowledge pool.
-  // 4 chunks at a stricter cutoff. At 0.25 almost anything in the KB cleared
-  // the bar, so weakly-related chunks came along as context and the model
-  // dutifully worked them into the answer — which is what made replies wander.
-  const search = (v: number[]) =>
+  //
+  // Thresholds: Cohere embed-english-v3.0 cosine scores for a genuinely relevant
+  // but differently-worded chunk routinely land in the 0.25–0.5 band — measured
+  // even a document's own chunks against a query drawn from that same document
+  // scored 0.59 / 0.31 / 0.23. A flat 0.4 cutoff therefore dropped real matches
+  // and the bot answered "I don't have that" about a document sitting right in
+  // its KB. So: a modest primary floor, then a relaxed last-resort pass. Weak
+  // context is not the same as a wrong answer — the grounding prompt still makes
+  // the model decline anything the chunks don't actually cover.
+  const PRIMARY_FLOOR = 0.3;
+  const search = (v: number[], opts: { threshold?: number; limit?: number } = {}) =>
     qdrant.search(collectionName(target.tenantId), {
       vector: v,
-      limit: 4,
-      score_threshold: 0.4,
+      limit: opts.limit ?? 5,
+      ...(opts.threshold !== undefined ? { score_threshold: opts.threshold } : {}),
       with_payload: true,
       filter: { must: [{ key: "botId", match: { value: target.botId } }] },
     });
 
   let hits: Awaited<ReturnType<typeof qdrant.search>> = [];
   try {
-    hits = await search(vector);
+    hits = await search(vector, { threshold: PRIMARY_FLOOR });
 
     // A follow-up ("how long do I have?") embeds to nothing useful on its own.
     // Rewrite it against the conversation and try once more before concluding
@@ -188,8 +195,19 @@ WHAT YOU KNOW
       const standalone = await condenseQuery(history, query);
       if (standalone !== query) {
         const revector = await embedQuery(standalone);
-        if (revector) hits = await search(revector);
+        if (revector) hits = await search(revector, { threshold: PRIMARY_FLOOR });
       }
+    }
+
+    // Last resort: nothing cleared the primary floor. Take the top few chunks
+    // with NO floor at all — marketing PDFs and typo'd questions embed weakly
+    // (measured scores of 0.20–0.28 for plainly on-topic questions), so any
+    // fixed cutoff strands a document the KB clearly contains. The grounding
+    // prompt is the real filter: it makes the model reply with the no-answer
+    // line whenever these chunks don't actually cover what was asked, so feeding
+    // it the best-available context can only help an on-topic question.
+    if (!hits.length) {
+      hits = await search(vector, { limit: 3 });
     }
   } catch (err) {
     // Swallowing this silently makes a broken search indistinguishable from an
