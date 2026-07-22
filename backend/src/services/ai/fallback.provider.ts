@@ -1,7 +1,9 @@
-import { AIProvider, ChatMessage, ChatOptions } from "./ai-provider.interface.js";
+import { AIProvider, ChatMessage, ChatOptions, ChatResult, StreamChunk } from "./ai-provider.interface.js";
 
 /** Terse default; a detail-seeking turn passes a larger ceiling via ChatOptions. */
 const DEFAULT_MAX_TOKENS = 400;
+
+const FALLBACK_TEXT = "I'm here to help! Could you please rephrase your question?";
 
 // OpenRouter is OpenAI API compatible
 export class FallbackProvider implements AIProvider {
@@ -10,7 +12,7 @@ export class FallbackProvider implements AIProvider {
   // Default to a cheap but very fast & capable model on OpenRouter
   private defaultModel = process.env.FALLBACK_AI_MODEL || "openai/gpt-4o-mini";
 
-  async chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<string> {
+  async chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<ChatResult> {
     if (!this.apiKey) {
       throw new Error("Fallback provider called but FALLBACK_AI_API_KEY is not configured.");
     }
@@ -36,10 +38,13 @@ export class FallbackProvider implements AIProvider {
     }
 
     const data = await response.json();
-    return data.choices?.[0]?.message?.content ?? "I'm here to help! Could you please rephrase your question?";
+    return {
+      text: data.choices?.[0]?.message?.content ?? FALLBACK_TEXT,
+      tokensUsed: data.usage?.total_tokens ?? 0,
+    };
   }
 
-  async streamChat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>> {
+  async streamChat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<AsyncIterable<StreamChunk>> {
     if (!this.apiKey) {
       throw new Error("Fallback provider called but FALLBACK_AI_API_KEY is not configured.");
     }
@@ -56,6 +61,8 @@ export class FallbackProvider implements AIProvider {
         max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
         temperature: 0.3,
         stream: true,
+        // Final usage-only chunk, so streamed fallback answers are metered too.
+        stream_options: { include_usage: true },
       }),
     });
 
@@ -75,7 +82,7 @@ export class FallbackProvider implements AIProvider {
         // away, so streamed fallback answers arrived with most of their tokens
         // missing. Parse every event in the chunk into this queue and drain it
         // one value per next() call before reading more from the network.
-        const queue: Array<{ choices: Array<{ delta: { content?: string | null } }> }> = [];
+        const queue: StreamChunk[] = [];
         let done = false;
 
         return {
@@ -108,8 +115,8 @@ export class FallbackProvider implements AIProvider {
 }
 
 /** Pull every parseable `data:` event out of a block of SSE lines. */
-function parseEvents(block: string): Array<{ choices: Array<{ delta: { content?: string | null } }> }> {
-  const out: Array<{ choices: Array<{ delta: { content?: string | null } }> }> = [];
+function parseEvents(block: string): StreamChunk[] {
+  const out: StreamChunk[] = [];
   for (const line of block.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) continue;

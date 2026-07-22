@@ -1,3 +1,5 @@
+// Must be the very first import so Sentry can instrument http/express before use.
+import "./instrument.js";
 import http from "node:http";
 import { Server } from "socket.io";
 import { app, initializeApp } from "./app.js";

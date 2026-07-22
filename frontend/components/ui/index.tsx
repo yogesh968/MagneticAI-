@@ -235,6 +235,25 @@ export function Pagination({
   );
 }
 
+/* ── UsageBar ───────────────────────────────────────────────────────────── */
+// A value meter for the Billing page (none existed). Fill turns amber past 80%
+// and red at/over the limit, so a tenant sees a squeeze coming. A null limit is
+// "unlimited" — rendered as an empty track. Matches the light theme tokens.
+export function UsageBar({
+  used, limit, className = "",
+}: { used: number; limit: number | null; className?: string }) {
+  const unlimited = limit == null;
+  const pct = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(limit, 1)) * 100));
+  const tone = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-accent-500";
+  return (
+    <div className={`h-2 w-full overflow-hidden rounded-full bg-sunken ${className}`}>
+      {!unlimited && (
+        <div className={`h-full rounded-full ${tone} transition-[width] duration-500`} style={{ width: `${pct}%` }} />
+      )}
+    </div>
+  );
+}
+
 /* ── InfoRow ────────────────────────────────────────────────────────────── */
 export function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (

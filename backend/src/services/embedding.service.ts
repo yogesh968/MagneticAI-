@@ -1,3 +1,5 @@
+import { env } from "../config/env.js";
+
 // Cohere embed-english-v3.0 — 1024 dimensions, free tier 1000 calls/min
 export const VECTOR_SIZE = 1024;
 
@@ -7,7 +9,7 @@ export async function embedText(input: string): Promise<number[] | null> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.COHERE_API_KEY!}`,
+        Authorization: `Bearer ${env.COHERE_API_KEY ?? ""}`,
       },
       body: JSON.stringify({
         model: "embed-english-v3.0",
@@ -33,7 +35,7 @@ export async function embedQuery(input: string): Promise<number[] | null> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.COHERE_API_KEY!}`,
+        Authorization: `Bearer ${env.COHERE_API_KEY ?? ""}`,
       },
       body: JSON.stringify({
         model: "embed-english-v3.0",

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { createPublicTicket, createSession, history, sendMessage, streamMessage } from "../controllers/chat.controller.js";
 import { validate, verifySession } from "../middleware/index.js";
+import { checkQuota } from "../middleware/quota.js";
 
 import { rateLimit } from "express-rate-limit";
 
@@ -44,10 +45,10 @@ chatRouter.post("/session", sessionRateLimiter, validate(sessionSchema), createS
 // tenantId and sessionId now come from the x-session-token header, not the body.
 const messageSchema = z.object({ message: z.string().min(1).max(5000), customerName: z.string().optional(), customerEmail: z.string().email().optional() });
 
-chatRouter.post("/message", verifySession, chatRateLimiter, validate(messageSchema),
+chatRouter.post("/message", verifySession, chatRateLimiter, checkQuota, validate(messageSchema),
   (req, res) => req.accepts("text/event-stream") ? streamMessage(req, res) : sendMessage(req, res)
 );
-chatRouter.post("/message/stream", verifySession, chatRateLimiter, validate(messageSchema), streamMessage);
+chatRouter.post("/message/stream", verifySession, chatRateLimiter, checkQuota, validate(messageSchema), streamMessage);
 chatRouter.post("/ticket", verifySession, chatRateLimiter,
   validate(z.object({ customerName: z.string().min(1), customerEmail: z.string().email(), description: z.string().min(1), priority: z.enum(["low", "medium", "high", "urgent"]).optional() })),
   createPublicTicket

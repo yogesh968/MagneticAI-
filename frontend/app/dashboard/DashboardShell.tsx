@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   BarChart3, BookOpen, Bot, LogOut, MessageSquare, TicketCheck,
   AlertTriangle, LayoutDashboard, ChevronRight, Bell, Code2, Plug,
-  Users, X, Menu, Search, Loader2,
+  Users, X, Menu, Search, Loader2, CreditCard,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Logo } from "@/components/brand/Logo";
@@ -26,6 +26,7 @@ const ICONS: Record<string, typeof LayoutDashboard> = {
   "/dashboard/team": Users,
   "/dashboard/widget": Code2,
   "/dashboard/integrations": Plug,
+  "/dashboard/billing": CreditCard,
 };
 
 const GROUPS = [
@@ -33,7 +34,7 @@ const GROUPS = [
   { label: "Support", hrefs: ["/dashboard/conversations", "/dashboard/tickets", "/dashboard/escalations"] },
   { label: "Knowledge", hrefs: ["/dashboard/bots", "/dashboard/knowledge-base", "/dashboard/ai-config"] },
   { label: "Platform", hrefs: ["/dashboard/analytics"] },
-  { label: "Manage", hrefs: ["/dashboard/team", "/dashboard/widget", "/dashboard/integrations"] },
+  { label: "Manage", hrefs: ["/dashboard/team", "/dashboard/widget", "/dashboard/integrations", "/dashboard/billing"] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = { admin: "Admin", agent: "Agent", superadmin: "Super Admin" };

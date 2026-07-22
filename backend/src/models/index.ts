@@ -1,7 +1,35 @@
 import mongoose, { Schema, model, type Model } from "mongoose";
 
 const tenantSettings = new Schema({ widgetColor: { type: String, default: "#2563eb" }, widgetPosition: { type: String, default: "bottom-right" } }, { _id: false });
-const TenantSchema = new Schema({ name: { type: String, required: true }, slug: { type: String, required: true, unique: true, lowercase: true }, email: String, plan: { type: String, enum: ["free", "pro", "enterprise"], default: "free" }, isActive: { type: Boolean, default: true }, razorpaySubscriptionId: String, settings: { type: tenantSettings, default: () => ({}) } }, { timestamps: true });
+
+// Per-tenant billing-period usage. Counters here are period-scoped (messages,
+// tokens) and roll over monthly via usage.service. Docs/bots/seats are NOT
+// stored here — they are counted live from their collections at read time to
+// avoid drift. tokensUsed aggregates Groq/OpenRouter usage for the margin view.
+const tenantUsage = new Schema({
+  periodStart: { type: Date, default: Date.now },
+  messagesUsed: { type: Number, default: 0 },
+  tokensUsed: { type: Number, default: 0 },
+}, { _id: false });
+
+const TenantSchema = new Schema({
+  name: { type: String, required: true },
+  slug: { type: String, required: true, unique: true, lowercase: true },
+  email: String,
+  plan: { type: String, enum: ["free", "starter", "pro", "enterprise"], default: "free" },
+  isActive: { type: Boolean, default: true },
+  // Subscription lifecycle, distinct from isActive (the hard on/off switch).
+  // "past_due" keeps the tenant serving through the grace window before a lapse
+  // actually disables it — see payment.controller and the createSession gate.
+  subscriptionStatus: { type: String, enum: ["none", "trialing", "active", "past_due", "cancelled"], default: "none" },
+  gracePeriodEnds: Date,
+  trialEndsAt: Date,
+  razorpaySubscriptionId: String,
+  razorpayCustomerId: String,
+  razorpayPlanId: String,
+  usage: { type: tenantUsage, default: () => ({}) },
+  settings: { type: tenantSettings, default: () => ({}) },
+}, { timestamps: true });
 
 // tokenVersion is embedded in every JWT and re-checked on refresh. Bumping it
 // invalidates all outstanding refresh tokens for the user (logout, password reset).

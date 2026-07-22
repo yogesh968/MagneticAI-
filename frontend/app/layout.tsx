@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { NavProgress } from "@/components/brand/NavProgress";
+import { SentryInit } from "@/components/brand/SentryInit";
 import "./globals.css";
 
 // Self-hosted at build time: no render-blocking round trip to Google, and no
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`h-full ${inter.variable} ${interTight.variable} ${jetBrainsMono.variable}`}>
       <body className="h-full">
+        <SentryInit />
         <NavProgress />
         <Toaster
           position="top-right"

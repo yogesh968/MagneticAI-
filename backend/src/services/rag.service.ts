@@ -3,13 +3,15 @@ import { collectionName, qdrant } from "../config/qdrant.js";
 import { embedQuery } from "./embedding.service.js";
 import { GroqProvider } from "./ai/groq.provider.js";
 import { FallbackProvider } from "./ai/fallback.provider.js";
-import { ChatMessage } from "./ai/ai-provider.interface.js";
+import { ChatMessage, ChatResult, StreamChunk } from "./ai/ai-provider.interface.js";
 export type RagResult = {
   answer: string;
   hasContext: boolean;
   documentsReferenced: string[];
   /** Human-readable names of the documents behind the answer, for citation in the UI. */
   sources: string[];
+  /** Total tokens the answer cost (prompt + completion), for metering/margin. */
+  tokensUsed: number;
 };
 
 /** Identifies which bot is answering, and therefore which slice of the KB to search. */
@@ -49,12 +51,12 @@ async function callProviderWithFallback(
   messages: ChatMessage[],
   stream: false,
   maxTokens?: number,
-): Promise<string>;
+): Promise<ChatResult>;
 async function callProviderWithFallback(
   messages: ChatMessage[],
   stream: true,
   maxTokens?: number,
-): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>>;
+): Promise<AsyncIterable<StreamChunk>>;
 async function callProviderWithFallback(
   messages: ChatMessage[],
   stream: boolean,
@@ -106,7 +108,7 @@ async function condenseQuery(history: RagHistory, query: string): Promise<string
       },
       { role: "user", content: `${transcript}\nCustomer: ${query}\n\nStandalone search query:` },
     ]);
-    const clean = String(rewritten ?? "").trim().replace(/^["']|["']$/g, "");
+    const clean = String(rewritten.text ?? "").trim().replace(/^["']|["']$/g, "");
     // A rewrite that returns an essay has misunderstood the job; ignore it.
     return clean && clean.length < 200 ? clean : query;
   } catch (err) {
@@ -297,13 +299,23 @@ const buildMessages = (system: string, history: RagHistory, query: string): Chat
   { role: "user", content: query },
 ];
 
+/** Rough token estimate when a provider does not report usage (~4 chars/token). */
+const estimateTokens = (...parts: string[]) => Math.ceil(parts.join(" ").length / 4);
+
 export async function answerWithRag(target: RagTarget, query: string, history: RagHistory = []): Promise<RagResult> {
   const detail = wantsDetail(query);
   const rag = await prepareRag(target, query, history, detail);
   const maxTokens = detail ? DETAIL_MAX_TOKENS : BRIEF_MAX_TOKENS;
-  const answer = await callProviderWithFallback(buildMessages(rag.system, history, query), false, maxTokens);
+  const result = await callProviderWithFallback(buildMessages(rag.system, history, query), false, maxTokens);
+  const answer = result.text;
   const cited = declined(answer) ? [] : rag.sources;
-  return { answer, hasContext: rag.hasContext, documentsReferenced: rag.documentsReferenced, sources: cited };
+  return {
+    answer,
+    hasContext: rag.hasContext,
+    documentsReferenced: rag.documentsReferenced,
+    sources: cited,
+    tokensUsed: result.tokensUsed || estimateTokens(rag.system, query, answer),
+  };
 }
 
 export async function streamAnswerWithRag(
@@ -317,7 +329,10 @@ export async function streamAnswerWithRag(
   const maxTokens = detail ? DETAIL_MAX_TOKENS : BRIEF_MAX_TOKENS;
   const stream = await callProviderWithFallback(buildMessages(rag.system, history, query), true, maxTokens);
   let answer = "";
+  let tokensUsed = 0;
   for await (const part of stream) {
+    // The final usage-only chunk (include_usage) carries no content; read both.
+    if (part.usage?.total_tokens) tokensUsed = part.usage.total_tokens;
     const token = part.choices[0]?.delta?.content ?? "";
     if (token) {
       answer += token;
@@ -330,5 +345,6 @@ export async function streamAnswerWithRag(
     hasContext: rag.hasContext,
     documentsReferenced: rag.documentsReferenced,
     sources: declined(final) ? [] : rag.sources,
+    tokensUsed: tokensUsed || estimateTokens(rag.system, query, final),
   };
 }

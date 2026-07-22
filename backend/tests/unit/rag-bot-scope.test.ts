@@ -13,7 +13,8 @@ import { jest } from "@jest/globals";
 // no-floor last-resort pass and fire a SECOND search, which is a different code
 // path than the single-retrieval behaviour these scoping assertions target.
 const search = jest.fn<any>().mockResolvedValue([{ payload: { text: "context", documentId: "d1" } }]);
-const chat = jest.fn<any>().mockResolvedValue("ok");
+// chat() now returns { text, tokensUsed } (token metering), not a bare string.
+const chat = jest.fn<any>().mockResolvedValue({ text: "ok", tokensUsed: 42 });
 
 jest.unstable_mockModule("../../src/config/qdrant.js", () => ({
   qdrant: { search },
