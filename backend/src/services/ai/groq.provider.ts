@@ -1,5 +1,5 @@
 import { groq } from "../../config/groq.js";
-import { AIProvider, ChatMessage, ChatOptions } from "./ai-provider.interface.js";
+import { AIProvider, ChatMessage, ChatOptions, ChatResult, StreamChunk } from "./ai-provider.interface.js";
 
 // Groq retires model snapshots without warning, and a decommissioned id does NOT
 // fail with 429 — it throws a 400 that slips past the rate-limit retry below and
@@ -15,16 +15,18 @@ const MODELS = [
 /** Terse default; a detail-seeking turn passes a larger ceiling via ChatOptions. */
 const DEFAULT_MAX_TOKENS = 400;
 
+const FALLBACK_TEXT = "I'm here to help! Could you please rephrase your question?";
+
 export class GroqProvider implements AIProvider {
-  async chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<string> {
+  async chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<ChatResult> {
     return this.chatWithRetry(messages, opts.maxTokens ?? DEFAULT_MAX_TOKENS, 0);
   }
 
-  async streamChat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>> {
+  async streamChat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<AsyncIterable<StreamChunk>> {
     return this.streamWithRetry(messages, opts.maxTokens ?? DEFAULT_MAX_TOKENS, 0);
   }
 
-  private async chatWithRetry(messages: ChatMessage[], maxTokens: number, attempt: number): Promise<string> {
+  private async chatWithRetry(messages: ChatMessage[], maxTokens: number, attempt: number): Promise<ChatResult> {
     const model = MODELS[Math.min(attempt, MODELS.length - 1)]!;
     try {
       const res = await groq.chat.completions.create({
@@ -34,7 +36,10 @@ export class GroqProvider implements AIProvider {
         stream: false,
         messages,
       });
-      return res.choices[0]?.message.content ?? "I'm here to help! Could you please rephrase your question?";
+      return {
+        text: res.choices[0]?.message.content ?? FALLBACK_TEXT,
+        tokensUsed: res.usage?.total_tokens ?? 0,
+      };
     } catch (err: any) {
       if (err?.status === 429 && attempt < MODELS.length - 1) {
         const delay = Math.pow(2, attempt) * 1000;
@@ -46,7 +51,7 @@ export class GroqProvider implements AIProvider {
     }
   }
 
-  private async streamWithRetry(messages: ChatMessage[], maxTokens: number, attempt: number): Promise<AsyncIterable<{ choices: Array<{ delta: { content?: string | null } }> }>> {
+  private async streamWithRetry(messages: ChatMessage[], maxTokens: number, attempt: number): Promise<AsyncIterable<StreamChunk>> {
     const model = MODELS[Math.min(attempt, MODELS.length - 1)]!;
     try {
       return await groq.chat.completions.create({
@@ -54,6 +59,9 @@ export class GroqProvider implements AIProvider {
         max_tokens: maxTokens,
         temperature: 0.3,
         stream: true,
+        // Ask Groq to append a final usage-only chunk so streamed turns can be
+        // metered too (otherwise streaming answers would record 0 tokens).
+        stream_options: { include_usage: true },
         messages,
       }) as any;
     } catch (err: any) {

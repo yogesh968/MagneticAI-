@@ -7,7 +7,9 @@ import type { NextFunction, Request, Response } from "express";
 import cookieParser from "cookie-parser";
 import express from "express";
 import helmetPkg from "helmet";
+import mongoose from "mongoose";
 import { connectDB } from "./config/db.js";
+import { qdrant } from "./config/qdrant.js";
 import { dashboardCors, publicCors } from "./config/cors.js";
 import { errorHandler } from "./middleware/index.js";
 import { analyticsRouter } from "./routes/analytics.routes.js";
@@ -19,7 +21,9 @@ import { integrationRouter } from "./routes/integration.routes.js";
 import { kbRouter } from "./routes/kb.routes.js";
 import { ticketRouter } from "./routes/ticket.routes.js";
 import { paymentRouter } from "./routes/payment.routes.js";
+import { billingRouter } from "./routes/billing.routes.js";
 import { uploadDir } from "./utils/upload-path.js";
+import { startRetentionJob } from "./services/retention.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -36,7 +40,27 @@ app.use(express.urlencoded({ extended: true, limit: "1mb", verify: (req: any, _r
 app.use(cookieParser());
 
 app.get("/", (_req, res) => res.json({ status: "ok", service: "Magnetic AI API" }));
+// Liveness — cheap, no dependencies. This is what a process supervisor pings.
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+// Readiness — verifies the critical dependencies are actually reachable, so an
+// uptime monitor learns about a dead DB/vector store before a client does.
+// Mongo down → 503 (we can't serve); Qdrant down → still 200 but flagged
+// "degraded" (non-KB chat and the dashboard keep working).
+app.get("/ready", async (_req, res) => {
+  const dbUp = mongoose.connection.readyState === 1;
+  let qdrantUp = false;
+  try {
+    await Promise.race([
+      qdrant.getCollections(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+    ]);
+    qdrantUp = true;
+  } catch {
+    qdrantUp = false;
+  }
+  const status = !dbUp ? "unhealthy" : qdrantUp ? "ok" : "degraded";
+  res.status(dbUp ? 200 : 503).json({ status, checks: { mongo: dbUp, qdrant: qdrantUp } });
+});
 app.get("/favicon.ico", (_req, res) => res.status(204).end());
 
 // Serve widget.js — use resolve() so path works after tsc compilation on any platform
@@ -75,6 +99,7 @@ app.use("/api/tickets", dashboardCors, ticketRouter);
 app.use("/api/conversations", dashboardCors, conversationRouter);
 app.use("/api/analytics", dashboardCors, analyticsRouter);
 app.use("/api/bots", dashboardCors, botRouter);
+app.use("/api/billing", dashboardCors, billingRouter);
 app.use(errorHandler);
 
 let initPromise: Promise<void> | undefined;
@@ -84,7 +109,10 @@ export function initializeApp() {
     // mkdir may fail on read-only filesystems (Vercel) — swallow the error
     mkdir(uploadDir, { recursive: true }).catch(() => undefined),
     connectDB(),
-  ]).then(() => undefined);
+  ]).then(() => {
+    // Retention purge needs the DB; start it once connected. No-op when disabled.
+    startRetentionJob();
+  });
 
   return initPromise;
 }

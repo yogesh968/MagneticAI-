@@ -131,7 +131,7 @@ if (docCount === 0) {
         documentId: String(doc._id),
         tenantId: String(tenant._id),
         botId: String(sample.bot._id),
-        path: destPath,
+        originalUrl: destPath,
         type: "txt",
       });
       console.info(`[seed] indexed: ${sample.name} -> ${sample.bot.botName}`);

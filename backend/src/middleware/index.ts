@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler, NextFunction, Request, Response } from "express";
 import { Types } from "mongoose";
 import { ZodError, type ZodType } from "zod";
+import * as Sentry from "@sentry/node";
 import { verifyAccessToken, verifySessionToken } from "../utils/jwt.js";
 import { ACCESS_COOKIE } from "../utils/cookies.js";
 import { isProd } from "../config/env.js";
@@ -68,6 +69,9 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   }
   console.error(error);
   const status = (error as { status?: number }).status ?? 500;
+  // Report genuine server faults to Sentry (a no-op when SENTRY_DSN is unset).
+  // Client errors (4xx) are handled above and never reach here.
+  if (status >= 500) Sentry.captureException(error);
   // Never leak internal exception text in production.
   const message = status >= 500 && isProd ? "Internal server error" : (error as Error).message || "Internal server error";
   res.status(status).json({ message });

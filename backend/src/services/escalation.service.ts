@@ -12,15 +12,49 @@ export function detectEscalation(text: string, custom: Array<{ trigger?: string;
   return { trigger: match, priority };
 }
 
+/** How long after one auto "SYSTEM ERROR" ticket to suppress the next, so a
+ *  provider outage spanning many conversations doesn't flood the queue (A5). */
+const SYSTEM_ERROR_COOLDOWN_MS = 5 * 60 * 1000;
+
 export async function createTicket(tenantId: string, conversation: any, description: string, priority: Priority = "low") {
   const existing = await Ticket.findOne({ tenantId, conversationId: conversation._id });
   if (existing) return existing;
-  const last = await Ticket.findOne({ tenantId }).sort({ createdAt: -1 }).select("ticketNumber").lean<any>();
-  const next = Number(last?.ticketNumber?.replace(/\D/g, "")) + 1 || 1;
-  const ticket = await Ticket.create({ tenantId, conversationId: conversation._id, ticketNumber: `TKT-${String(next).padStart(3, "0")}`, customerName: conversation.customerName, customerEmail: conversation.customerEmail, subject: description.slice(0, 80) || "Support request", description, priority });
+
+  // ticketNumber is derived from the latest number, which races under load and
+  // can collide on the unique {tenantId, ticketNumber} index. Recompute and retry
+  // on a duplicate-key error instead of surfacing a 500.
+  let ticket: any;
+  for (let attempt = 0; ; attempt++) {
+    const last = await Ticket.findOne({ tenantId }).sort({ createdAt: -1 }).select("ticketNumber").lean<any>();
+    const next = Number(last?.ticketNumber?.replace(/\D/g, "")) + 1 || 1;
+    try {
+      ticket = await Ticket.create({ tenantId, conversationId: conversation._id, ticketNumber: `TKT-${String(next).padStart(3, "0")}`, customerName: conversation.customerName, customerEmail: conversation.customerEmail, subject: description.slice(0, 80) || "Support request", description, priority });
+      break;
+    } catch (err: any) {
+      if (err?.code === 11000 && attempt < 4) continue;
+      throw err;
+    }
+  }
+
   await Conversation.updateOne({ _id: conversation._id, tenantId }, { ticketId: ticket._id, isEscalated: true, escalatedAt: new Date(), status: "escalated" });
   await Message.create({ tenantId, conversationId: conversation._id, role: "system", content: `Support ticket ${ticket.ticketNumber} created.`, eventType: "ticket_created" });
   return ticket;
+}
+
+/**
+ * Opens a high-priority "SYSTEM ERROR" ticket when the AI fails completely —
+ * but at most once per tenant per cooldown window. Without this, every failing
+ * message during an outage opened a fresh high-priority ticket and flooded the
+ * queue (blueprint A5). Returns null when suppressed.
+ */
+export async function createSystemErrorTicket(tenantId: string, conversation: any, description: string) {
+  const recent = await Ticket.findOne({
+    tenantId,
+    description: { $regex: /^SYSTEM ERROR/ },
+    createdAt: { $gt: new Date(Date.now() - SYSTEM_ERROR_COOLDOWN_MS) },
+  }).select("_id").lean<any>();
+  if (recent) return null;
+  return createTicket(tenantId, conversation, description, "high");
 }
 
 /**

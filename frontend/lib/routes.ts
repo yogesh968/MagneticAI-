@@ -28,6 +28,7 @@ export const DASHBOARD_NAV: NavItem[] = [
   { href: "/dashboard/team", label: "Team", roles: ["admin", "superadmin"] },
   { href: "/dashboard/widget", label: "Widget", roles: ["admin", "superadmin"] },
   { href: "/dashboard/integrations", label: "Integrations", roles: ["admin", "superadmin"] },
+  { href: "/dashboard/billing", label: "Billing", roles: ["admin", "superadmin"] },
 ];
 
 export const navFor = (role: Role) => DASHBOARD_NAV.filter((n) => n.roles.includes(role));

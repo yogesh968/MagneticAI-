@@ -4,13 +4,20 @@ import { chunkText } from "../utils/chunker.js";
 import { parseDocument } from "../utils/parser.js";
 import { embedText } from "./embedding.service.js";
 import { ensureCollection, qdrant } from "../config/qdrant.js";
+import { storage } from "./storage/index.js";
 
-export type ProcessArgs = { documentId: string; tenantId: string; botId: string; path: string; type: string };
+export type ProcessArgs = { documentId: string; tenantId: string; botId: string; originalUrl: string; type: string };
 
-export async function processDocument({ documentId, tenantId, botId, path, type }: ProcessArgs) {
+export async function processDocument({ documentId, tenantId, botId, originalUrl, type }: ProcessArgs) {
+  // Materialise the stored object as a local file the parser can read. For the
+  // S3 driver this downloads to a temp file we must clean up afterwards; for the
+  // local driver it is the file already on disk and cleanup is a no-op.
+  let cleanup: () => Promise<void> = async () => undefined;
   try {
     await Document.updateOne({ _id: documentId, tenantId }, { status: "processing" });
-    const chunks = chunkText(await parseDocument(path, type));
+    const local = await storage.toLocalPath(originalUrl);
+    cleanup = local.cleanup;
+    const chunks = chunkText(await parseDocument(local.path, type));
     const collection = await ensureCollection(tenantId);
 
     // Delete existing vectors for this document in case of re-indexing
@@ -50,5 +57,7 @@ export async function processDocument({ documentId, tenantId, botId, path, type 
   } catch (error) {
     await Document.updateOne({ _id: documentId, tenantId }, { status: "failed" });
     console.error("Document processing failed", error);
+  } finally {
+    await cleanup();
   }
 }

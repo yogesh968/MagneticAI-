@@ -2,7 +2,8 @@ import type { Request, Response } from "express";
 import crypto from "node:crypto";
 import { Bot, Conversation, Message, Tenant } from "../models/index.js";
 import { HISTORY_TURNS, answerWithRag, streamAnswerWithRag, type RagHistory } from "../services/rag.service.js";
-import { createTicket, evaluateEscalation } from "../services/escalation.service.js";
+import { createSystemErrorTicket, createTicket, evaluateEscalation } from "../services/escalation.service.js";
+import { recordUsage } from "../services/usage.service.js";
 import { signSessionToken } from "../utils/jwt.js";
 
 /**
@@ -22,7 +23,13 @@ export async function createSession(req: Request, res: Response) {
     : await Bot.findOne({ tenantId, isDefault: true, isActive: true }).select("_id tenantId").lean<any>();
   if (!bot) return res.status(404).json({ message: "Bot not found" });
 
-  if (!await Tenant.exists({ _id: bot.tenantId, isActive: true })) {
+  const tenant = await Tenant.findOne({ _id: bot.tenantId, isActive: true }).select("subscriptionStatus gracePeriodEnds").lean<any>();
+  if (!tenant) return res.status(404).json({ message: "Bot not found" });
+  // A lapsed subscription keeps serving through its grace window; only once that
+  // has passed do we stop minting new sessions. 404 (not 402) so the public
+  // widget never leaks the tenant's billing state to its end-customers.
+  const lapsed = tenant.subscriptionStatus === "past_due" || tenant.subscriptionStatus === "cancelled";
+  if (lapsed && tenant.gracePeriodEnds && Date.now() > new Date(tenant.gracePeriodEnds).getTime()) {
     return res.status(404).json({ message: "Bot not found" });
   }
 
@@ -47,7 +54,7 @@ export async function createSession(req: Request, res: Response) {
 
 async function persistReply(tenantId: string, conversation: any, userMessage: string, result: Awaited<ReturnType<typeof answerWithRag>>, started: number) {
   const escalation = await evaluateEscalation(tenantId, `${userMessage}\n${result.answer}`, conversation.botId ? String(conversation.botId) : undefined);
-  const assistant = await Message.create({ tenantId, conversationId: conversation._id, role: "assistant", content: result.answer, metadata: { responseTime: Date.now() - started, documentsReferenced: result.documentsReferenced, sources: result.sources } });
+  const assistant = await Message.create({ tenantId, conversationId: conversation._id, role: "assistant", content: result.answer, metadata: { tokensUsed: result.tokensUsed, responseTime: Date.now() - started, documentsReferenced: result.documentsReferenced, sources: result.sources } });
   conversation.messageCount += 2;
   // Only create ticket on explicit escalation trigger — not just because KB had no context
   let ticket;
@@ -101,15 +108,18 @@ export async function sendMessage(req: Request, res: Response) {
   try {
     const result = await answerWithRag(target, message, history);
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
+    // Meter only successful answers — a provider outage should not burn quota.
+    await recordUsage(tenantId, { messages: 1, tokens: result.tokensUsed });
     res.json({ message: assistant, ticket, escalated: Boolean(ticket) });
   } catch (error) {
     console.error("[chat] AI generation failed completely:", error);
     const fallbackMessage = "We're having trouble right now, an agent will follow up shortly.";
-    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [], sources: [] };
+    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [], sources: [], tokensUsed: 0 };
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
-    // Explicitly create a high priority ticket since the system failed
+    // Explicitly create a high priority ticket since the system failed — but
+    // rate-limited across conversations so an outage doesn't flood the queue.
     if (!ticket) {
-      await createTicket(tenantId, conversation, "SYSTEM ERROR: " + message, "high");
+      await createSystemErrorTicket(tenantId, conversation, "SYSTEM ERROR: " + message);
     }
     res.json({ message: assistant, ticket: true, escalated: true });
   }
@@ -134,15 +144,16 @@ export async function streamMessage(req: Request, res: Response) {
       history,
     );
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
+    await recordUsage(tenantId, { messages: 1, tokens: result.tokensUsed });
     res.write(`event: done\ndata: ${JSON.stringify({ message: assistant, ticket, escalated: Boolean(ticket) })}\n\n`);
   } catch (error) {
     console.error("[chat] AI generation failed completely during stream:", error);
     const fallbackMessage = "We're having trouble right now, an agent will follow up shortly.";
     res.write(`event: token\ndata: ${JSON.stringify({ token: fallbackMessage })}\n\n`);
-    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [], sources: [] };
+    const result = { answer: fallbackMessage, hasContext: false, documentsReferenced: [], sources: [], tokensUsed: 0 };
     const { assistant, ticket } = await persistReply(tenantId, conversation, message, result, started);
     if (!ticket) {
-      await createTicket(tenantId, conversation, "SYSTEM ERROR: " + message, "high");
+      await createSystemErrorTicket(tenantId, conversation, "SYSTEM ERROR: " + message);
     }
     res.write(`event: done\ndata: ${JSON.stringify({ message: assistant, ticket: true, escalated: true })}\n\n`);
   }

@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
-import { unlink } from "node:fs/promises";
 import { Bot, Conversation, Document, Tenant } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { answerWithRag } from "../services/rag.service.js";
+import { storage } from "../services/storage/index.js";
+import { withinResourceLimit } from "../services/usage.service.js";
 
 /** Document counts per bot, so the UI can show what each bot actually knows. */
 async function withCounts(tenantId: unknown, bots: any[]) {
@@ -36,6 +37,12 @@ export async function getBot(req: Request, res: Response) {
 }
 
 export async function createBot(req: Request, res: Response) {
+  // Plan bot ceiling.
+  const quota = await withinResourceLimit(String(req.tenantId), "bots");
+  if (!quota.ok) {
+    return res.status(402).json({ code: "quota_exceeded", message: `Your plan allows ${quota.limit} bot${quota.limit === 1 ? "" : "s"}. Upgrade your plan to add more.` });
+  }
+
   // The tenant's very first bot becomes the default, so the widget always has
   // something to fall back to.
   const isFirst = !(await Bot.exists({ tenantId: req.tenantId }));
@@ -93,7 +100,7 @@ export async function deleteBot(req: Request, res: Response) {
       filter: { must: [{ key: "botId", match: { value: String(bot._id) } }] },
     })
     .catch((e) => console.error("[bot] failed to delete vectors for bot", String(bot._id), e));
-  await Promise.all(documents.map((d) => unlink(d.originalUrl).catch(() => undefined)));
+  await Promise.all(documents.map((d) => storage.remove(d.originalUrl)));
   await Document.deleteMany({ botId: bot._id, tenantId: req.tenantId });
 
   // Conversations are history — keep them, just detach the bot.

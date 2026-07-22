@@ -1,9 +1,10 @@
 import type { Request, Response } from "express";
-import { mkdir, unlink } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
 import { Bot, Document } from "../models/index.js";
 import { collectionName, qdrant } from "../config/qdrant.js";
 import { processDocument } from "../services/document.service.js";
-import { uploadDir } from "../utils/upload-path.js";
+import { storage, makeStorageKey } from "../services/storage/index.js";
+import { withinResourceLimit } from "../services/usage.service.js";
 
 /** Resolves the target bot, always scoped to the caller's tenant. */
 async function resolveBot(req: Request, botId?: string) {
@@ -18,18 +19,32 @@ export async function upload(req: Request, res: Response) {
 
   const bot = await resolveBot(req, req.body.botId);
   if (!bot) {
-    await unlink(req.file.path).catch(() => undefined);
+    // No target bot — discard the temp upload (disk driver only; memory has none).
+    if (req.file.path) await unlink(req.file.path).catch(() => undefined);
     return res.status(400).json({ message: "No bot selected. Create a bot before uploading documents." });
   }
 
-  await mkdir(uploadDir, { recursive: true });
+  // Plan document ceiling. Reject before spending storage/embedding work.
+  const quota = await withinResourceLimit(String(req.tenantId), "docs");
+  if (!quota.ok) {
+    if (req.file.path) await unlink(req.file.path).catch(() => undefined);
+    return res.status(402).json({ code: "quota_exceeded", message: `Your plan allows ${quota.limit} documents. Upgrade your plan to add more.` });
+  }
+
   const type = req.file.originalname.split(".").pop()!.toLowerCase();
+  // Persist the raw file via the storage driver (disk or S3/R2) and keep the
+  // returned reference on the Document — that reference is the single source of
+  // truth for re-indexing and deletion, on either driver.
+  const originalUrl = await storage.save(
+    { buffer: req.file.buffer, localPath: req.file.path, contentType: req.file.mimetype },
+    makeStorageKey(String(req.tenantId), req.file.originalname),
+  );
   const document = await Document.create({
     tenantId: req.tenantId,
     botId: bot._id,
     name: req.file.originalname,
     type,
-    originalUrl: req.file.path,
+    originalUrl,
     uploadedBy: req.user!.id,
     metadata: { size: req.file.size },
   });
@@ -37,7 +52,7 @@ export async function upload(req: Request, res: Response) {
     documentId: String(document._id),
     tenantId: String(req.tenantId),
     botId: String(bot._id),
-    path: req.file.path,
+    originalUrl,
     type,
   });
   res.status(202).json(document);
@@ -67,7 +82,7 @@ export async function deleteDocument(req: Request, res: Response) {
   const item = await Document.findOneAndDelete({ _id: req.params.id, tenantId: req.tenantId });
   if (!item) return res.status(404).json({ message: "Document not found" });
   await qdrant.delete(collectionName(String(req.tenantId)), { wait: true, filter: { must: [{ key: "documentId", match: { value: String(item._id) } }] } }).catch(() => undefined);
-  await unlink(item.originalUrl).catch(() => undefined);
+  await storage.remove(item.originalUrl);
   res.status(204).end();
 }
 
@@ -80,7 +95,7 @@ export async function reindex(req: Request, res: Response) {
     documentId: String(doc._id),
     tenantId: String(req.tenantId),
     botId: String(doc.botId),
-    path: doc.originalUrl,
+    originalUrl: doc.originalUrl,
     type: doc.type,
   }));
   res.status(202).json({ message: `Re-indexing ${documents.length} documents` });
